@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title>NI Labs Welcome</title>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#0a4f5a" />
+      <stop offset="100%" stop-color="#59a36f" />
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="24" fill="url(#bg)" />
+  <path d="M32 88V40h12l20 28V40h12v48H64L44 60v28H32Z" fill="#f7f5e8" />
+  <circle cx="92" cy="38" r="10" fill="#f2c14e" />
+</svg>

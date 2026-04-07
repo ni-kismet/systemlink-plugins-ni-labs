@@ -1,0 +1,12 @@
+{
+  "name": "@ni-kismet/ni-labs-welcome",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "clean": "rm -rf dist submission-manifest.json",
+    "build": "node ../../scripts/build-static-plugin.mjs .",
+    "package": "npm run clean && npm run build && sl-webapp-nipkg build --config nipkg.config.json --output-dir dist/nipkg",
+    "submission-manifest": "npm run package && node ../../scripts/create-submission-manifest.mjs ."
+  }
+}

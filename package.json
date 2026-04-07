@@ -1,0 +1,17 @@
+{
+  "name": "@ni-kismet/systemlink-plugins-ni-labs",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "npm@11.6.2",
+  "workspaces": [
+    "plugins/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "package": "npm run package --workspaces --if-present",
+    "submission-manifest": "npm run submission-manifest --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@ni-kismet/sl-webapp-nipkg": "^1.1.0"
+  }
+}

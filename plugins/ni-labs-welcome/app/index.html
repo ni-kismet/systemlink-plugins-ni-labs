@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NI Labs Welcome</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <p class="eyebrow">Plugin Manager Sample</p>
+        <h1>NI Labs Welcome</h1>
+        <p class="lede">
+          This sample plugin proves that this repository can build a web payload,
+          package it as a .nipkg, publish a release asset, and submit it to the
+          SystemLink Plugin Manager catalog.
+        </p>
+        <button id="pingButton" type="button">Run local smoke check</button>
+        <p id="statusLine" class="status">Idle.</p>
+      </section>
+      <section class="card-grid">
+        <article class="card">
+          <h2>Build</h2>
+          <p>The repo copies static assets into a SystemLink-friendly web root.</p>
+        </article>
+        <article class="card">
+          <h2>Package</h2>
+          <p>The root workflow packages each plugin with embedded Plugin Manager metadata.</p>
+        </article>
+        <article class="card">
+          <h2>Publish</h2>
+          <p>Release-backed submissions let the app-store repo review immutable artifacts.</p>
+        </article>
+      </section>
+    </main>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

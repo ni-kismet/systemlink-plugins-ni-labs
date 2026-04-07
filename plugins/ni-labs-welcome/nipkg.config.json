@@ -1,0 +1,16 @@
+{
+  "package": "ni-labs-welcome",
+  "version": "0.1.0",
+  "displayName": "NI Labs Welcome",
+  "description": "A minimal NI Labs example plugin used to verify build, packaging, and app-store submission automation.",
+  "section": "Diagnostics",
+  "maintainer": "NI Kismet <appstore@ni.com>",
+  "homepage": "https://github.com/ni-kismet/systemlink-plugins-ni-labs",
+  "license": "MIT",
+  "xbPlugin": "webapp",
+  "slPluginManagerTags": "ni-labs,example,welcome,webapp",
+  "slPluginManagerMinServerVersion": "2024 Q4",
+  "iconFile": "icon.svg",
+  "buildDir": "dist/webapp/browser",
+  "buildCommand": "npm run build"
+}
