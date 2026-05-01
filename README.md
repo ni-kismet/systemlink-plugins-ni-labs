@@ -23,9 +23,11 @@ It is set up to:
 │       ├── nipkg.config.json
 │       └── package.json
 └── scripts/
+    ├── build-plugin-package.mjs
     ├── build-plugin-payload.mjs
     ├── create-submission-manifest.mjs
-    └── list-plugins.mjs
+    ├── list-plugins.mjs
+    └── verify-plugin-package.mjs
 ```
 
 ## How publishing works

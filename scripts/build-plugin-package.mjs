@@ -1,10 +1,10 @@
 import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
-import { cp, mkdir, mkdtemp, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
-import { gunzipSync, gzipSync } from 'node:zlib';
+import { gzipSync } from 'node:zlib';
 
 const require = createRequire(import.meta.url);
 const { Deboa } = require('deboa');
@@ -200,10 +200,15 @@ function buildControlContent(config, configPath) {
 }
 
 async function ensureDirectoryExists(directoryPath) {
+  let directoryStat;
   try {
-    await stat(directoryPath);
+    directoryStat = await stat(directoryPath);
   } catch {
     throw new Error(`Directory not found: ${directoryPath}`);
+  }
+
+  if (!directoryStat.isDirectory()) {
+    throw new Error(`Path is not a directory: ${directoryPath}`);
   }
 }
 
@@ -224,47 +229,49 @@ await rm(outputDir, { recursive: true, force: true });
 await mkdir(outputDir, { recursive: true });
 
 const tempSourceRoot = await mkdtemp(path.join(tmpdir(), 'sl-plugin-package-'));
-const sourceDir = path.join(tempSourceRoot, 'source');
-const applicationFilesDir = path.join(sourceDir, 'ApplicationFiles_64');
-await mkdir(applicationFilesDir, { recursive: true });
-await cp(buildDir, applicationFilesDir, { recursive: true });
+try {
+  const sourceDir = path.join(tempSourceRoot, 'source');
+  const applicationFilesDir = path.join(sourceDir, 'ApplicationFiles_64');
+  await mkdir(applicationFilesDir, { recursive: true });
+  await cp(buildDir, applicationFilesDir, { recursive: true });
 
-const architecture = config.architecture ?? 'all';
-const packageBaseName = `${config.package}_${config.version}_${architecture}`;
-const debPath = path.join(outputDir, `${packageBaseName}.deb`);
-const nipkgPath = path.join(outputDir, `${packageBaseName}.nipkg`);
+  const architecture = config.architecture ?? 'all';
+  const packageBaseName = `${config.package}_${config.version}_${architecture}`;
+  const debPath = path.join(outputDir, `${packageBaseName}.deb`);
+  const nipkgPath = path.join(outputDir, `${packageBaseName}.nipkg`);
 
-const controlFileOptions = {
-  maintainer: config.maintainer,
-  packageName: config.package,
-  shortDescription: config.description ?? '',
-  version: config.version,
-  architecture,
-  ...(Array.isArray(config.depends) && config.depends.length > 0 ? { depends: config.depends.join(', ') } : {})
-};
+  const controlFileOptions = {
+    maintainer: config.maintainer,
+    packageName: config.package,
+    shortDescription: config.description ?? '',
+    version: config.version,
+    architecture,
+    ...(Array.isArray(config.depends) && config.depends.length > 0 ? { depends: config.depends.join(', ') } : {})
+  };
 
-const deboa = new Deboa({
-  controlFileOptions,
-  sourceDir,
-  targetDir: outputDir,
-  targetFileName: packageBaseName
-});
+  const deboa = new Deboa({
+    controlFileOptions,
+    sourceDir,
+    targetDir: outputDir,
+    targetFileName: packageBaseName
+  });
 
-await deboa.package();
+  await deboa.package();
 
-const members = parseAr(await readFile(debPath));
-const controlMember = members.find((member) => member.name === 'control.tar.gz');
+  const members = parseAr(await readFile(debPath));
+  const controlMember = members.find((member) => member.name === 'control.tar.gz');
 
-if (!controlMember) {
-  throw new Error('control.tar.gz not found in generated .deb');
+  if (!controlMember) {
+    throw new Error('control.tar.gz not found in generated .deb');
+  }
+
+  controlMember.data = createTarGzSingleFile('./control', Buffer.from(buildControlContent(config, configPath), 'utf8'));
+  await writeFile(debPath, buildAr(members));
+  await rename(debPath, nipkgPath);
+
+  const artifact = await readFile(nipkgPath);
+  console.log(`Created ${path.relative(pluginDir, nipkgPath)}`);
+  console.log(`SHA256 ${sha256(artifact)}`);
+} finally {
+  await rm(tempSourceRoot, { recursive: true, force: true });
 }
-
-controlMember.data = createTarGzSingleFile('./control', Buffer.from(buildControlContent(config, configPath), 'utf8'));
-await writeFile(debPath, buildAr(members));
-await rename(debPath, nipkgPath);
-
-const artifact = await readFile(nipkgPath);
-console.log(`Created ${path.relative(pluginDir, nipkgPath)}`);
-console.log(`SHA256 ${sha256(artifact)}`);
-
-await rm(tempSourceRoot, { recursive: true, force: true });

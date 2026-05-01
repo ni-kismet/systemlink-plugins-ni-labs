@@ -67,12 +67,18 @@ function parseTarEntries(buffer) {
 
     const dataStart = offset + 512;
     const dataEnd = dataStart + size;
+    if (dataEnd > buffer.length) {
+      throw new Error(`Tar entry exceeds archive bounds for ${name || '<unnamed>'}`);
+    }
     entries.push({
       name,
       data: buffer.subarray(dataStart, dataEnd)
     });
 
     offset = dataStart + Math.ceil(size / 512) * 512;
+    if (offset > buffer.length) {
+      throw new Error(`Tar archive is truncated after ${name || '<unnamed>'}`);
+    }
   }
 
   return entries;

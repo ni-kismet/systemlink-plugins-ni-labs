@@ -12,6 +12,6 @@
     "submission-manifest": "npm run submission-manifest --workspaces --if-present"
   },
   "devDependencies": {
-    "@ni-kismet/sl-webapp-nipkg": "^1.1.0"
+    "deboa": "^1.2.0"
   }
 }
