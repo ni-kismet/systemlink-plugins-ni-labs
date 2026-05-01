@@ -1,0 +1,16 @@
+{
+  "package": "ni-labs-asset-calibration-alarms-notification",
+  "version": "0.1.0",
+  "displayName": "Asset Calibration Alarms and Notification",
+  "description": "A SystemLink notebook that creates calibration alarms and sends email notifications based on managed asset due dates.",
+  "section": "Automation",
+  "maintainer": "NI Kismet <appstore@ni.com>",
+  "homepage": "https://github.com/ni-kismet/systemlink-plugins-ni-labs",
+  "license": "MIT",
+  "xbPlugin": "notebook",
+  "slPluginManagerTags": "ni-labs,example,notebook,assets,calibration,alarms,notification",
+  "slPluginManagerMinServerVersion": "2024 Q4",
+  "iconFile": "icon.svg",
+  "buildDir": "dist/notebook",
+  "buildCommand": "npm run build"
+}

@@ -1,11 +1,11 @@
 {
-  "name": "@ni-kismet/ni-labs-welcome",
+  "name": "@ni-kismet/ni-labs-asset-calibration-alarms-notification",
   "private": true,
   "version": "0.1.0",
   "type": "module",
   "scripts": {
     "clean": "rm -rf dist submission-manifest.json",
-    "build": "node ../../scripts/build-plugin-payload.mjs . app dist/webapp/browser",
+    "build": "node ../../scripts/build-plugin-payload.mjs . notebook dist/notebook",
     "package": "npm run clean && npm run build && node ../../scripts/build-plugin-package.mjs . && node ../../scripts/verify-plugin-package.mjs .",
     "submission-manifest": "npm run package && node ../../scripts/create-submission-manifest.mjs ."
   }
