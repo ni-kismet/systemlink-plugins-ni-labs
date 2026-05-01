@@ -3,7 +3,7 @@
 This repository is a source repo for NI Labs plugins that are distributed through the Plugin Manager for SystemLink catalog.
 
 It is set up to:
-- build one or more plugin webapps from this repo
+- build one or more plugin payloads from this repo
 - package each plugin as a `.nipkg` with embedded Plugin Manager metadata
 - publish the reviewed `.nipkg` as a GitHub release asset in this repo
 - dispatch a thin submission manifest to `ni-kismet/systemlink-plugin-manager`
@@ -14,22 +14,34 @@ It is set up to:
 .
 ├── .github/workflows/publish-to-plugin-manager.yml
 ├── plugins/
+│   ├── ni-labs-asset-calibration-alarms-notification/
+│   │   ├── notebook/
+│   │   ├── nipkg.config.json
+│   │   └── package.json
 │   └── ni-labs-welcome/
 │       ├── app/
 │       ├── nipkg.config.json
 │       └── package.json
 └── scripts/
-    ├── build-static-plugin.mjs
+    ├── build-plugin-package.mjs
+    ├── build-plugin-payload.mjs
     ├── create-submission-manifest.mjs
-    └── list-plugins.mjs
+    ├── list-plugins.mjs
+    └── verify-plugin-package.mjs
 ```
 
 ## How publishing works
 
 Each plugin lives under `plugins/<plugin-name>/` and must provide:
-- an application payload under `app/` that builds to an `index.html` at the web root
+- a plugin payload directory such as `app/` for webapps or `notebook/` for notebooks
 - a `package.json` with at least a `build` script
 - a `nipkg.config.json` containing the package metadata that will be embedded into the `.nipkg`
+
+Each plugin package script should also verify the generated archive before publication so malformed `.nipkg` files are caught locally and in CI.
+
+The `xbPlugin` value in `nipkg.config.json` identifies the Plugin Manager resource type. For example:
+- `webapp` packages a browser application payload
+- `notebook` packages one or more `.ipynb` files and exposes them as installable notebook content
 
 The GitHub Actions workflow:
 1. discovers plugins from `plugins/*/nipkg.config.json`
@@ -73,10 +85,10 @@ npm run submission-manifest --workspace @ni-kismet/ni-labs-welcome
 
 ## Adding a new plugin
 
-1. Copy `plugins/ni-labs-welcome/` to a new directory under `plugins/`
+1. Copy a similar plugin under `plugins/` that matches your payload type
 2. Update that plugin's `package.json`
 3. Update `nipkg.config.json` with the real package metadata
-4. Replace the contents of `app/`
+4. Replace the contents of the payload directory such as `app/` or `notebook/`
 5. Commit the change and either:
    - push a tag matching `<package>-v<version>` to publish a single plugin release, or
    - run the `Publish to Plugin Manager` workflow manually
