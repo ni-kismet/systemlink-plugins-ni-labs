@@ -10,7 +10,14 @@ import '@ni/nimble-components/dist/esm/banner';
 import '@ni/nimble-components/dist/esm/toolbar';
 import '@ni/nimble-components/dist/esm/icons/add';
 import '@ni/nimble-components/dist/esm/icons/arrow-rotate-right';
+import '@ni/nimble-components/dist/esm/icons/calendar-week';
+import '@ni/nimble-components/dist/esm/icons/calipers';
+import '@ni/nimble-components/dist/esm/icons/clipboard';
+import '@ni/nimble-components/dist/esm/icons/forklift';
+import '@ni/nimble-components/dist/esm/icons/rectangle-check-lines';
 import '@ni/nimble-components/dist/esm/icons/times';
+import '@ni/nimble-components/dist/esm/icons/user-helmet-safety';
+import '@ni/nimble-components/dist/esm/icons/wrench-hammer';
 
 // Nimble font faces
 import '@ni/nimble-tokens/dist/fonts/css/fonts.css';
@@ -18,10 +25,3 @@ import '@ni/nimble-tokens/dist/fonts/css/fonts.css';
 // OK components
 import '@ni/ok-components/dist/esm/fv/search-input';
 
-// Spright work-item icons
-import '@ni/spright-components/dist/esm/icons/work-item-rectangle-check-lines';
-import '@ni/spright-components/dist/esm/icons/work-item-wrench-hammer';
-import '@ni/spright-components/dist/esm/icons/work-item-calipers';
-import '@ni/spright-components/dist/esm/icons/work-item-user-helmet-safety';
-import '@ni/spright-components/dist/esm/icons/work-item-calendar-week';
-import '@ni/spright-components/dist/esm/icons/work-item-forklift';

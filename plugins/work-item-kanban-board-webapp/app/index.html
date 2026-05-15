@@ -33,7 +33,7 @@
                 <nimble-list-option value="" selected>All Workspaces</nimble-list-option>
             </nimble-select>
             <nimble-select id="assigneeFilter" slot="start" name="assigneeFilter" appearance="outline" filter-mode="standard" title="Assigned To">
-                <nimble-list-option value="">All Users</nimble-list-option>
+                <nimble-list-option value="" selected>All Users</nimble-list-option>
             </nimble-select>
             <ok-fv-search-input id="searchFilter" slot="start" placeholder="Search work items..." title="Search"></ok-fv-search-input>
         </nimble-toolbar>
@@ -105,9 +105,9 @@
                     <h2 id="drawerTitle">Work Item</h2>
                     <a id="drawerSubtitle" class="drawer-subtitle" href="#" target="_blank" rel="noopener noreferrer" hidden></a>
                 </div>
-                <nimble-button id="drawerCloseBtn" appearance="ghost" content-hidden>
-                    <nimble-icon-arrow-rotate-right slot="start" style="transform: rotate(90deg); display: none;"></nimble-icon-arrow-rotate-right>
-                    ✕
+                <nimble-button id="drawerCloseBtn" appearance="ghost" content-hidden aria-label="Close drawer" title="Close drawer">
+                    <nimble-icon-times slot="start"></nimble-icon-times>
+                    Close
                 </nimble-button>
             </div>
             <div class="drawer-body" id="drawerBody"></div>

@@ -224,14 +224,6 @@ header h1 {
     transform: scale(0.95);
 }
 
-.card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 6px;
-    margin-bottom: 4px;
-}
-
 /* Title colors by work item type */
 .kanban-card.type-testplan .card-title      { color: #009B65; }
 .kanban-card.type-workorder .card-title     { color: #00734B; }
@@ -248,19 +240,6 @@ header h1 {
 [data-theme="dark"] .kanban-card.type-reservation .card-title   { color: #00A1D4; }
 [data-theme="dark"] .kanban-card.type-transportorder .card-title { color: #9B7A60; }
 
-.card-id {
-    font-size: 10px;
-    color: var(--ni-nimble-placeholder-font-color);
-    white-space: nowrap;
-    text-decoration: none;
-    display: none;
-}
-
-.card-id:hover {
-    text-decoration: underline;
-    color: var(--ni-nimble-body-font-color);
-}
-
 .card-title {
     font: var(--ni-nimble-body-font);
     font-weight: 500;
@@ -269,6 +248,7 @@ header h1 {
     overflow: hidden;
     text-overflow: ellipsis;
     display: -webkit-box;
+    line-clamp: 2;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     cursor: pointer;
@@ -296,21 +276,6 @@ header h1 {
 .inline-edit-select {
     max-width: 100%;
     flex: 1;
-}
-
-.card-system {
-    font-size: 11px;
-    margin-bottom: 4px;
-}
-
-.card-system a {
-    color: var(--ni-nimble-placeholder-font-color);
-    text-decoration: none;
-}
-
-.card-system a:hover {
-    color: var(--ni-nimble-body-font-color);
-    text-decoration: underline;
 }
 
 .card-footer {

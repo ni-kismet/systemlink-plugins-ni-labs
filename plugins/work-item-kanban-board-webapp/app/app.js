@@ -15,11 +15,6 @@ import {
     createClient as createUserClient,
     createConfig as createUserConfig,
 } from '@ni/systemlink-clients-ts/user/client';
-import { querySystems } from '@ni/systemlink-clients-ts/systems-management';
-import {
-    createClient as createSystemsManagementClient,
-    createConfig as createSystemsManagementConfig,
-} from '@ni/systemlink-clients-ts/systems-management/client';
 
 // SystemLink SDK clients
 const systemLinkOrigin = window.location.origin;
@@ -29,10 +24,6 @@ const workItemClient = createWorkItemClient(createWorkItemConfig({
 }));
 const userClient = createUserClient(createUserConfig({
     baseUrl: `${systemLinkOrigin}/niuser/v1`,
-    credentials: 'include',
-}));
-const systemsManagementClient = createSystemsManagementClient(createSystemsManagementConfig({
-    baseUrl: systemLinkOrigin,
     credentials: 'include',
 }));
 
@@ -59,13 +50,13 @@ const TYPE_LABELS = {
 };
 
 const TYPE_ICONS = {
-    testplan: '<spright-icon-work-item-rectangle-check-lines></spright-icon-work-item-rectangle-check-lines>',
-    workorder: '📋',
-    maintenance: '<spright-icon-work-item-wrench-hammer></spright-icon-work-item-wrench-hammer>',
-    calibration: '<spright-icon-work-item-calipers></spright-icon-work-item-calipers>',
-    job: '<spright-icon-work-item-user-helmet-safety></spright-icon-work-item-user-helmet-safety>',
-    reservation: '<spright-icon-work-item-calendar-week></spright-icon-work-item-calendar-week>',
-    transportorder: '<spright-icon-work-item-forklift></spright-icon-work-item-forklift>',
+    testplan: '<nimble-icon-rectangle-check-lines></nimble-icon-rectangle-check-lines>',
+    workorder: '<nimble-icon-clipboard></nimble-icon-clipboard>',
+    maintenance: '<nimble-icon-wrench-hammer></nimble-icon-wrench-hammer>',
+    calibration: '<nimble-icon-calipers></nimble-icon-calipers>',
+    job: '<nimble-icon-user-helmet-safety></nimble-icon-user-helmet-safety>',
+    reservation: '<nimble-icon-calendar-week></nimble-icon-calendar-week>',
+    transportorder: '<nimble-icon-forklift></nimble-icon-forklift>',
 };
 
 // DOM Elements
@@ -91,7 +82,6 @@ let allWorkItems = [];
 let workItemTypes = [];
 let userDisplayNames = {};  // userId → display name cache
 let userIdsByName = {};     // display name → userId (reverse lookup)
-let systemDisplayNames = {}; // systemId → alias cache
 let allWorkspaces = [];     // { id, name, enabled, default }
 let draggedItem = null;
 let draggedCardEl = null;
@@ -106,23 +96,31 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const params = new URLSearchParams(window.location.search);
             const queryTheme = params.get('theme');
-            if (queryTheme === 'light' || queryTheme === 'dark') return queryTheme;
+            if (queryTheme === 'light' || queryTheme === 'dark') {
+                return { theme: queryTheme, followSystemTheme: false, watchParentTheme: false };
+            }
         } catch {}
         try {
             if (window.parent !== window) {
                 const parentProvider = window.parent.document.querySelector('nimble-theme-provider');
                 const parentTheme = parentProvider?.getAttribute('theme');
-                if (parentTheme === 'light' || parentTheme === 'dark') return parentTheme;
+                if (parentTheme === 'light' || parentTheme === 'dark') {
+                    return { theme: parentTheme, followSystemTheme: false, watchParentTheme: true };
+                }
             }
         } catch {}
         try {
             const saved = localStorage.getItem('sl_app_theme');
-            if (saved === 'light' || saved === 'dark') return saved;
+            if (saved === 'light' || saved === 'dark') {
+                return { theme: saved, followSystemTheme: false, watchParentTheme: false };
+            }
         } catch {}
         try {
-            if (window.matchMedia?.('(prefers-color-scheme: dark)').matches) return 'dark';
+            if (window.matchMedia?.('(prefers-color-scheme: dark)').matches) {
+                return { theme: 'dark', followSystemTheme: true, watchParentTheme: false };
+            }
         } catch {}
-        return 'light';
+        return { theme: 'light', followSystemTheme: true, watchParentTheme: false };
     }
 
     function applyTheme(theme) {
@@ -142,15 +140,21 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch {}
     }
 
+    const initialTheme = detectInitialTheme();
+
     customElements.whenDefined('nimble-theme-provider').then(() => {
-        applyTheme(detectInitialTheme());
-        watchParentTheme();
+        applyTheme(initialTheme.theme);
+        if (initialTheme.watchParentTheme) {
+            watchParentTheme();
+        }
     });
 
-    try {
-        window.matchMedia?.('(prefers-color-scheme: dark)')
-            .addEventListener('change', e => applyTheme(e.matches ? 'dark' : 'light'));
-    } catch {}
+    if (initialTheme.followSystemTheme) {
+        try {
+            window.matchMedia?.('(prefers-color-scheme: dark)')
+                .addEventListener('change', e => applyTheme(e.matches ? 'dark' : 'light'));
+        } catch {}
+    }
 
     setupEventListeners();
     Promise.all([loadWorkItemTypes(), loadAllUsers(), loadWorkspaces()]).then(() => loadWorkItems());
@@ -188,6 +192,23 @@ function getSystemLinkErrorMessage(result) {
     return result.error?.error?.message || result.error?.message || `HTTP ${result.response?.status ?? 'error'}`;
 }
 
+function getFailedWorkItemsErrorMessage(data) {
+    if (!data?.failedWorkItems?.length) {
+        return null;
+    }
+
+    const failedIds = data.failedWorkItems
+        .map(workItem => workItem.id)
+        .filter(Boolean);
+    if (data.error?.message) {
+        return data.error.message;
+    }
+    if (failedIds.length > 0) {
+        return `Failed to update work item${failedIds.length === 1 ? '' : 's'}: ${failedIds.join(', ')}`;
+    }
+    return 'Failed to update one or more work items.';
+}
+
 async function executeSystemLinkRequest(requestPromise) {
     const result = await requestPromise;
 
@@ -198,14 +219,21 @@ async function executeSystemLinkRequest(requestPromise) {
     return result.data;
 }
 
-function persistWorkItemUpdates(workItems) {
-    return executeSystemLinkRequest(updateWorkItems({
+async function persistWorkItemUpdates(workItems, { replace = false } = {}) {
+    const data = await executeSystemLinkRequest(updateWorkItems({
         client: workItemClient,
         body: {
             workItems,
-            replace: false,
+            replace,
         },
     }));
+
+    const failedWorkItemsMessage = getFailedWorkItemsErrorMessage(data);
+    if (failedWorkItemsMessage) {
+        throw new Error(failedWorkItemsMessage);
+    }
+
+    return data;
 }
 
 // ─── API Calls ──────────────────────────────────────────────────
@@ -270,7 +298,6 @@ async function loadWorkItems() {
         } while (continuationToken);
 
         allWorkItems = allItems;
-        await loadSystemNames(allItems);
         populateAssigneeFilter();
         renderBoard();
     } catch (err) {
@@ -363,39 +390,6 @@ function getUserDisplayName(userId) {
     return userDisplayNames[userId] || 'Unknown User';
 }
 
-function getSystemDisplayName(systemId) {
-    if (systemId in systemDisplayNames) return systemDisplayNames[systemId];
-    return 'Unknown System';
-}
-
-async function loadSystemNames(items) {
-    const systemIds = new Set();
-    for (const wi of items) {
-        const selections = wi.resources?.systems?.selections || [];
-        for (const s of selections) {
-            if (s.id && !(s.id in systemDisplayNames)) systemIds.add(s.id);
-        }
-    }
-    if (systemIds.size === 0) return;
-    try {
-        const data = await executeSystemLinkRequest(querySystems({
-            client: systemsManagementClient,
-            body: {
-                take: 1000,
-                projection: 'new(id, alias)',
-            },
-        }));
-        for (const sys of (data || [])) {
-            const systemData = sys.data;
-            if (systemData?.id) {
-                systemDisplayNames[systemData.id] = systemData.alias || systemData.id;
-            }
-        }
-    } catch (err) {
-        console.warn('Failed to load system names:', err);
-    }
-}
-
 function populateAssigneeFilter() {
     const currentVal = assigneeFilter.value;
     // Remove all options except the first "All" option
@@ -465,7 +459,7 @@ function renderBoard() {
         countEl.textContent = stateItems.length;
         col.innerHTML = '';
 
-        const sorted = stateItems.sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
+        const sorted = [...stateItems].sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
         const visible = sorted.slice(0, CARD_RENDER_LIMIT);
         visible.forEach(item => col.appendChild(createCard(item)));
 
@@ -719,12 +713,46 @@ async function onDrop(e) {
 
 // ─── Detail Drawer ──────────────────────────────────────────────
 
+function getSystemLinkBaseUrl() {
+    try {
+        const params = new URLSearchParams(window.location.search);
+        const basePath = params.get('slBasePath');
+        if (basePath) {
+            const normalizedBasePath = basePath.startsWith('/') ? basePath : `/${basePath}`;
+            return `${window.location.origin}${normalizedBasePath}`;
+        }
+    } catch {}
+
+    const candidateWindows = [window];
+    if (window.parent !== window) {
+        candidateWindows.unshift(window.parent);
+    }
+
+    for (const candidateWindow of candidateWindows) {
+        try {
+            const { origin, pathname } = candidateWindow.location;
+            const webappsIndex = pathname.indexOf('/webapps/');
+            if (webappsIndex >= 0) {
+                return `${origin}${pathname.slice(0, webappsIndex)}`;
+            }
+            return origin;
+        } catch {}
+    }
+
+    return window.location.origin;
+}
+
+function getWorkItemDetailsUrl(workItemId) {
+    const baseUrl = getSystemLinkBaseUrl();
+    return `${baseUrl}/labmanagement/workitems/workitem/${encodeURIComponent(workItemId)}/assets`;
+}
+
 function openDrawer(item) {
     currentDrawerItem = item;
     drawerTitle.textContent = item.name || 'Work Item';
     if (item.id) {
         drawerSubtitle.textContent = `#${item.id}`;
-        drawerSubtitle.href = `${window.location.origin}/labmanagement/workitems/workitem/${encodeURIComponent(item.id)}/assets`;
+        drawerSubtitle.href = getWorkItemDetailsUrl(item.id);
         drawerSubtitle.hidden = false;
     } else {
         drawerSubtitle.textContent = '';
@@ -744,7 +772,7 @@ function wirePropertyButtons() {
             const container = document.getElementById('drawer-properties');
             const row = document.createElement('div');
             row.className = 'prop-row';
-            row.innerHTML = `<nimble-text-field class="prop-edit-key" data-original-key="" appearance="underline" placeholder="Key"></nimble-text-field><nimble-text-field class="prop-edit-value" appearance="underline" placeholder="Value"></nimble-text-field><nimble-button class="prop-remove-btn" appearance="ghost" content-hidden title="Remove property" aria-label="Remove property"><nimble-icon-times slot="start"></nimble-icon-times>Close</nimble-button>`;
+            row.innerHTML = `<nimble-text-field class="prop-edit-key" data-original-key="" appearance="underline" placeholder="Key"></nimble-text-field><nimble-text-field class="prop-edit-value" appearance="underline" placeholder="Value"></nimble-text-field><nimble-button class="prop-remove-btn" appearance="ghost" content-hidden title="Remove property" aria-label="Remove property"><nimble-icon-times slot="start"></nimble-icon-times>Remove</nimble-button>`;
             container.appendChild(row);
             row.querySelector('.prop-remove-btn').addEventListener('click', () => row.remove());
             row.querySelector('.prop-edit-key').focus();
@@ -803,6 +831,7 @@ async function saveDrawerChanges() {
     // Check for property changes
     const propRows = document.querySelectorAll('.prop-row');
     const newProperties = {};
+    const originalProperties = currentDrawerItem.properties || {};
     let propsChanged = false;
     for (const row of propRows) {
         const keyField = row.querySelector('.prop-edit-key');
@@ -812,13 +841,14 @@ async function saveDrawerChanges() {
         const originalKey = keyField.dataset.originalKey;
         if (!newKey) continue; // skip empty keys
         newProperties[newKey] = newVal;
-        if (newKey !== originalKey || newVal !== (currentDrawerItem.properties?.[originalKey] ?? '')) {
+        if (newKey !== originalKey || newVal !== (originalProperties[originalKey] ?? '')) {
             propsChanged = true;
         }
     }
+    const removedPropertyKeys = Object.keys(originalProperties).filter(origKey => !(origKey in newProperties));
     // Check if any original keys were removed
-    if (!propsChanged && currentDrawerItem.properties) {
-        for (const origKey of Object.keys(currentDrawerItem.properties)) {
+    if (!propsChanged && Object.keys(originalProperties).length > 0) {
+        for (const origKey of Object.keys(originalProperties)) {
             if (!(origKey in newProperties)) {
                 propsChanged = true;
                 break;
@@ -826,7 +856,7 @@ async function saveDrawerChanges() {
         }
     }
     if (propsChanged) {
-        updates.properties = newProperties;
+        updates.properties = Object.keys(newProperties).length > 0 ? newProperties : null;
         changed = true;
     }
 
@@ -836,7 +866,9 @@ async function saveDrawerChanges() {
     }
 
     try {
-        const data = await persistWorkItemUpdates([updates]);
+        const data = await persistWorkItemUpdates([updates], {
+            replace: removedPropertyKeys.length > 0,
+        });
         if (data?.updatedWorkItems?.length > 0) {
             const updated = data.updatedWorkItems[0];
             const idx = allWorkItems.findIndex(w => w.id === currentDrawerItem.id);
@@ -925,7 +957,7 @@ function renderDrawerContent(item) {
             <span class="drawer-label">Properties</span>
             <div class="drawer-properties" id="drawer-properties">
                 ${Object.entries(item.properties).map(([k, v]) =>
-                    `<div class="prop-row"><nimble-text-field class="prop-edit-key" data-original-key="${escapeAttr(k)}" appearance="underline" value="${escapeAttr(k)}"></nimble-text-field><nimble-text-field class="prop-edit-value" appearance="underline" value="${escapeAttr(v)}"></nimble-text-field><nimble-button class="prop-remove-btn" appearance="ghost" content-hidden title="Remove property" aria-label="Remove property"><nimble-icon-times slot="start"></nimble-icon-times>Close</nimble-button></div>`
+                    `<div class="prop-row"><nimble-text-field class="prop-edit-key" data-original-key="${escapeAttr(k)}" appearance="underline" value="${escapeAttr(k)}"></nimble-text-field><nimble-text-field class="prop-edit-value" appearance="underline" value="${escapeAttr(v)}"></nimble-text-field><nimble-button class="prop-remove-btn" appearance="ghost" content-hidden title="Remove property" aria-label="Remove property"><nimble-icon-times slot="start"></nimble-icon-times>Remove</nimble-button></div>`
                 ).join('')}
             </div>
             <nimble-button id="addPropertyBtn" appearance="ghost"><nimble-icon-add slot="start"></nimble-icon-add>Add property</nimble-button>
@@ -952,15 +984,6 @@ function escapeAttr(str) {
     return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function getInitials(name) {
-    if (!name || name === 'Unassigned') return '?';
-    return name.split(/[\s@.]+/)
-        .filter(Boolean)
-        .slice(0, 2)
-        .map(s => s[0].toUpperCase())
-        .join('');
-}
-
 function formatRelativeDate(isoString) {
     const date = new Date(isoString);
     const now = new Date();
@@ -975,11 +998,6 @@ function formatRelativeDate(isoString) {
     return date.toLocaleDateString();
 }
 
-function formatShortDate(isoString) {
-    const date = new Date(isoString);
-    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-}
-
 function debounce(fn, ms) {
     let timer;
     return (...args) => {
@@ -989,12 +1007,14 @@ function debounce(fn, ms) {
 }
 
 function showError(message) {
+    successToast.open = false;
     errorToast.textContent = message;
     errorToast.open = true;
     setTimeout(() => { errorToast.open = false; }, 5000);
 }
 
 function showSuccess(message) {
+    errorToast.open = false;
     successToast.textContent = message;
     successToast.open = true;
     setTimeout(() => { successToast.open = false; }, 5000);
