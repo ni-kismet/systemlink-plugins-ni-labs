@@ -18,7 +18,11 @@ It is set up to:
 │   │   ├── notebook/
 │   │   ├── nipkg.config.json
 │   │   └── package.json
-│   └── ni-labs-welcome/
+│   ├── ni-labs-welcome/
+│       ├── app/
+│       ├── nipkg.config.json
+│       └── package.json
+│   └── work-item-kanban-board-webapp/
 │       ├── app/
 │       ├── nipkg.config.json
 │       └── package.json

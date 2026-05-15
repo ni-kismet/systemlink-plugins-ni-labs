@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Work Item Kanban Board - SystemLink</title>
+    <script type="module" src="./components.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nimble-theme-provider id="theme">
+    <div class="container">
+        <header>
+            <div class="header-row">
+                <div>
+                    <h1>Work Item Kanban Board</h1>
+                    <p class="subtitle">Drag work items between columns to update their state</p>
+                </div>
+                <div class="header-actions">
+                    <nimble-button id="refreshBtn" appearance="outline">
+                        <nimble-icon-arrow-rotate-right slot="start"></nimble-icon-arrow-rotate-right>
+                        Refresh
+                    </nimble-button>
+                </div>
+            </div>
+        </header>
+
+        <nimble-toolbar class="filter-toolbar">
+            <nimble-select id="typeFilter" slot="start" name="typeFilter" appearance="outline" filter-mode="standard" title="Type">
+                <nimble-list-option value="" selected>All Types</nimble-list-option>
+            </nimble-select>
+            <nimble-select id="workspaceFilter" slot="start" name="workspaceFilter" appearance="outline" filter-mode="standard" title="Workspace">
+                <nimble-list-option value="" selected>All Workspaces</nimble-list-option>
+            </nimble-select>
+            <nimble-select id="assigneeFilter" slot="start" name="assigneeFilter" appearance="outline" filter-mode="standard" title="Assigned To">
+                <nimble-list-option value="">All Users</nimble-list-option>
+            </nimble-select>
+            <ok-fv-search-input id="searchFilter" slot="start" placeholder="Search work items..." title="Search"></ok-fv-search-input>
+        </nimble-toolbar>
+
+        <div id="boardLoading" class="board-loading">
+            <nimble-spinner></nimble-spinner>
+            <span>Loading work items...</span>
+        </div>
+
+        <div id="kanbanBoard" class="kanban-board" hidden>
+            <div class="kanban-column" data-state="NEW">
+                <div class="column-header new-header">
+                    <span class="column-title">New</span>
+                    <span class="column-count" id="count-NEW">0</span>
+                </div>
+                <div class="column-body" id="col-NEW"></div>
+            </div>
+            <div class="kanban-column" data-state="DEFINED">
+                <div class="column-header defined-header">
+                    <span class="column-title">Defined</span>
+                    <span class="column-count" id="count-DEFINED">0</span>
+                </div>
+                <div class="column-body" id="col-DEFINED"></div>
+            </div>
+            <div class="kanban-column" data-state="REVIEWED">
+                <div class="column-header reviewed-header">
+                    <span class="column-title">Reviewed</span>
+                    <span class="column-count" id="count-REVIEWED">0</span>
+                </div>
+                <div class="column-body" id="col-REVIEWED"></div>
+            </div>
+            <div class="kanban-column" data-state="SCHEDULED">
+                <div class="column-header scheduled-header">
+                    <span class="column-title">Scheduled</span>
+                    <span class="column-count" id="count-SCHEDULED">0</span>
+                </div>
+                <div class="column-body" id="col-SCHEDULED"></div>
+            </div>
+            <div class="kanban-column" data-state="IN_PROGRESS">
+                <div class="column-header inprogress-header">
+                    <span class="column-title">In Progress</span>
+                    <span class="column-count" id="count-IN_PROGRESS">0</span>
+                </div>
+                <div class="column-body" id="col-IN_PROGRESS"></div>
+            </div>
+            <div class="kanban-column" data-state="PENDING_APPROVAL">
+                <div class="column-header pending-header">
+                    <span class="column-title">Pending Approval</span>
+                    <span class="column-count" id="count-PENDING_APPROVAL">0</span>
+                </div>
+                <div class="column-body" id="col-PENDING_APPROVAL"></div>
+            </div>
+            <div class="kanban-column" data-state="CLOSED">
+                <div class="column-header closed-header">
+                    <span class="column-title">Closed</span>
+                    <span class="column-count" id="count-CLOSED">0</span>
+                </div>
+                <div class="column-body" id="col-CLOSED"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detail drawer -->
+    <div id="detailDrawer" class="detail-drawer" hidden>
+        <div class="drawer-backdrop" id="drawerBackdrop"></div>
+        <div class="drawer-panel">
+            <div class="drawer-header">
+                <div class="drawer-heading">
+                    <h2 id="drawerTitle">Work Item</h2>
+                    <a id="drawerSubtitle" class="drawer-subtitle" href="#" target="_blank" rel="noopener noreferrer" hidden></a>
+                </div>
+                <nimble-button id="drawerCloseBtn" appearance="ghost" content-hidden>
+                    <nimble-icon-arrow-rotate-right slot="start" style="transform: rotate(90deg); display: none;"></nimble-icon-arrow-rotate-right>
+                    ✕
+                </nimble-button>
+            </div>
+            <div class="drawer-body" id="drawerBody"></div>
+            <div class="drawer-footer">
+                <nimble-button id="drawerCancelBtn" appearance="ghost">Close</nimble-button>
+                <nimble-button id="drawerSaveBtn" appearance="outline">Save</nimble-button>
+            </div>
+        </div>
+    </div>
+
+    <nimble-banner id="errorToast" severity="error"></nimble-banner>
+    <nimble-banner id="successToast" severity="information"></nimble-banner>
+</nimble-theme-provider>
+<script type="module" src="./app.js"></script>
+</body>
+</html>
