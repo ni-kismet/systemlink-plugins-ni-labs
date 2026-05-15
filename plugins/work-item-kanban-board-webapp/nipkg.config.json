@@ -4,7 +4,7 @@
   "displayName": "Work Item Kanban Board",
   "description": "A drag-and-drop Kanban board for visualizing and managing SystemLink work items by state.",
   "section": "Lab Management",
-  "maintainer": "NI Kismet <appstore@ni.com>",
+  "maintainer": "NI",
   "homepage": "https://github.com/ni-kismet/systemlink-plugins-ni-labs",
   "license": "MIT",
   "xbPlugin": "webapp",

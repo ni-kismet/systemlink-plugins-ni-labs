@@ -4,7 +4,7 @@
   "displayName": "NI Labs Welcome",
   "description": "A minimal NI Labs example plugin used to verify build, packaging, and app-store submission automation.",
   "section": "Diagnostics",
-  "maintainer": "NI Kismet <appstore@ni.com>",
+  "maintainer": "NI",
   "homepage": "https://github.com/ni-kismet/systemlink-plugins-ni-labs",
   "license": "MIT",
   "xbPlugin": "webapp",

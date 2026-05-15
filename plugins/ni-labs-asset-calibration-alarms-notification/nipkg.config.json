@@ -4,7 +4,7 @@
   "displayName": "Asset Calibration Alarms and Notification",
   "description": "A SystemLink notebook that creates calibration alarms and sends email notifications based on managed asset due dates.",
   "section": "Automation",
-  "maintainer": "NI Kismet <appstore@ni.com>",
+  "maintainer": "NI",
   "homepage": "https://github.com/ni-kismet/systemlink-plugins-ni-labs",
   "license": "MIT",
   "xbPlugin": "notebook",
