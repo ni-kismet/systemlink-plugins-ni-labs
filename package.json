@@ -12,6 +12,6 @@
     "submission-manifest": "npm run submission-manifest --workspaces --if-present"
   },
   "devDependencies": {
-    "deboa": "^1.2.0"
+    "deboa": "1.1.2"
   }
 }

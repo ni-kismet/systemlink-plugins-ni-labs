@@ -12,7 +12,7 @@
     "submission-manifest": "npm run package && node ../../scripts/create-submission-manifest.mjs ."
   },
   "devDependencies": {
-    "vite": "^8.0.13"
+    "vite": "^8.1.4"
   },
   "dependencies": {
     "@ni/nimble-components": "^35.8.0",
