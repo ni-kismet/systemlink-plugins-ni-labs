@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ATML File Manager</title>
+  <link rel="stylesheet" href="nimble/fonts/css/fonts.css" />
+  <link rel="stylesheet" href="styles.css" />
+  <script src="nimble/all-components-bundle.min.js"></script>
+  <script src="components/time-range-control.js"></script>
+</head>
+<body>
+  <nimble-theme-provider id="theme-provider" theme="light">
+    <nimble-label-provider-core></nimble-label-provider-core>
+
+    <header class="app-header">
+    <div class="brand">
+      <svg class="brand-logo" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M6 2h9l5 5v15a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="1.6"/>
+        <path d="M14 2v6h6" fill="none" stroke="currentColor" stroke-width="1.6"/>
+        <path d="M8.5 13.5l2 2 4-4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div>
+        <h1>ATML File Manager</h1>
+        <p class="subtitle">Browse SystemLink files, import ATML data, and inspect ATML test results</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <nimble-button id="nav-view-file" appearance="outline" title="View selected file" hidden>
+        <svg slot="start" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+        View file
+      </nimble-button>
+      <nimble-toggle-button id="nav-search" appearance="outline" checked title="Search files">
+        <svg slot="start" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="7"/>
+          <path d="M21 21l-4.3-4.3"/>
+        </svg>
+        Search files
+      </nimble-toggle-button>
+      <nimble-button id="nav-import" appearance="outline" title="Import ATML data">
+        <svg slot="start" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 15V3"/>
+          <path d="M7 8l5-5 5 5"/>
+          <path d="M4 20h16"/>
+        </svg>
+        Import ATML Data
+      </nimble-button>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <!-- Search / Files page -->
+    <section id="search-page" class="search-page">
+      <div class="search-bar">
+        <nimble-select id="workspace-select" class="search-select ws-select" filter-mode="standard">
+          <nimble-list-option value="" selected>All workspaces</nimble-list-option>
+        </nimble-select>
+        <nimble-text-field id="file-search" class="search-input" placeholder="Search file names" autocomplete="off" spellcheck="false">
+          <nimble-icon-magnifying-glass slot="start"></nimble-icon-magnifying-glass>
+          <nimble-button id="file-search-clear" slot="actions" appearance="ghost" content-hidden title="Clear search" aria-label="Clear search" style="display:none">
+            Clear
+            <nimble-icon-times slot="start"></nimble-icon-times>
+          </nimble-button>
+        </nimble-text-field>
+        <span id="date-range-mount" class="date-range-mount"></span>
+        <button id="refresh-btn" class="icon-btn" type="button" title="Refresh" aria-label="Refresh">
+          <nimble-icon-arrow-rotate-right></nimble-icon-arrow-rotate-right>
+        </button>
+      </div>
+      <div id="file-status" class="file-status">
+        <nimble-icon-filter></nimble-icon-filter>
+        <span id="file-status-text">Loading files…</span>
+      </div>
+      <div class="file-table-wrap">
+        <nimble-table id="file-table" id-field-name="id" selection-mode="single">
+          <nimble-table-column-anchor label-field-name="name" href-field-name="href" underline-hidden column-id="name" fractional-width="2.5" min-pixel-width="240">Name</nimble-table-column-anchor>
+          <nimble-table-column-text field-name="ext" column-id="ext">Extension</nimble-table-column-text>
+          <nimble-table-column-date-text field-name="created" column-id="created" sort-index="0" sort-direction="descending">Created</nimble-table-column-date-text>
+          <nimble-table-column-number-text field-name="size" column-id="size" format="decimal" decimal-digits="1">
+            <nimble-unit-byte></nimble-unit-byte>
+            Size
+          </nimble-table-column-number-text>
+          <nimble-table-column-text field-name="workspace" column-id="workspace">Workspace</nimble-table-column-text>
+        </nimble-table>
+        <div id="file-empty" class="no-results" hidden>No XML files match your search.</div>
+      </div>
+    </section>
+
+    <!-- Viewer page -->
+    <section id="viewer-page" class="content" hidden>
+      <div id="viewer" class="viewer" hidden>
+        <div class="viewer-topbar">
+          <div class="viewer-title">
+            <button id="back-to-files" class="icon-btn" type="button" title="Back to files" aria-label="Back to files">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M15 6l-6 6 6 6"/>
+              </svg>
+            </button>
+            <span id="format-badge" class="format-badge">XML</span>
+            <span id="viewer-filename" class="viewer-filename"></span>
+          </div>
+          <div class="viewer-actions">
+            <div class="seg" role="group" aria-label="View mode">
+              <nimble-toggle-button id="view-rendered" checked appearance="outline">Rendered</nimble-toggle-button>
+              <nimble-toggle-button id="view-raw" appearance="outline">Raw XML</nimble-toggle-button>
+            </div>
+            <nimble-button id="download-btn" appearance="ghost" title="Download original file">
+              <svg slot="start" class="dl-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 3v12"/>
+                <path d="M7 10l5 5 5-5"/>
+                <path d="M4 20h16"/>
+              </svg>
+              Download
+            </nimble-button>
+          </div>
+        </div>
+        <div id="viewer-body" class="viewer-body"></div>
+        <pre id="raw-view" class="raw-view" hidden><code id="raw-code"></code></pre>
+      </div>
+
+      <div id="loading-overlay" class="loading-overlay" hidden>
+        <nimble-spinner appearance="accent"></nimble-spinner>
+        <span>Loading file…</span>
+      </div>
+    </section>
+  </main>
+
+  <!-- Step details slide-out -->
+  <div id="drawer-backdrop" class="drawer-backdrop"></div>
+  <aside id="step-drawer" class="step-drawer" aria-label="Step details">
+    <header class="drawer-header">
+      <h2>Step Details</h2>
+      <div id="drawer-step-name" class="drawer-subtitle"></div>
+    </header>
+    <div class="drawer-tabs" role="tablist">
+      <button id="dtab-info" class="drawer-tab active" type="button">Info</button>
+      <button id="dtab-data" class="drawer-tab" type="button">Data</button>
+    </div>
+    <div class="drawer-body">
+      <div id="drawer-info"></div>
+      <div id="drawer-data" hidden></div>
+    </div>
+    <footer class="drawer-footer">
+      <nimble-button id="drawer-close" appearance="ghost">Close</nimble-button>
+    </footer>
+  </aside>
+
+  <!-- Import ATML data slide-out -->
+  <div id="upload-backdrop" class="drawer-backdrop"></div>
+  <aside id="upload-drawer" class="upload-drawer" aria-label="Import ATML data">
+    <header class="drawer-header">
+      <h2>Import ATML data</h2>
+    </header>
+    <div class="upload-body">
+      <label class="upload-label" for="upload-workspace">Workspace</label>
+      <nimble-select id="upload-workspace" class="upload-workspace"></nimble-select>
+
+      <div class="upload-options">
+        <nimble-checkbox id="opt-create-results">Create result data?</nimble-checkbox>
+        <nimble-checkbox id="opt-replace-existing">Replace existing files/results?</nimble-checkbox>
+      </div>
+
+      <p id="upload-perm-msg" class="upload-perm-msg" hidden></p>
+
+      <div id="dropzone" class="dropzone">
+        <p class="dz-primary">Drag files here</p>
+        <p class="dz-or">or</p>
+        <button id="dz-browse" class="dz-browse" type="button">Browse for files</button>
+        <input id="file-input" type="file" accept=".xml,.atml,text/xml,application/xml" multiple hidden />
+        <p class="dz-hint">ATML files (.xml or .atml)</p>
+      </div>
+
+      <table class="upload-list">
+        <thead>
+          <tr><th>Name</th><th class="ft-num">Size</th><th>State</th><th class="ft-num">Time</th><th class="ul-actions-col" aria-label="Actions"></th></tr>
+        </thead>
+        <tbody id="upload-rows"></tbody>
+      </table>
+    </div>
+    <footer class="drawer-footer upload-footer">
+      <div id="upload-progress" class="upload-progress" hidden>
+        <span id="upload-progress-time" class="upload-progress-text upload-progress-time"></span>
+        <div class="upload-progress-track"><div id="upload-progress-fill" class="upload-progress-fill"></div></div>
+        <span id="upload-progress-text" class="upload-progress-text"></span>
+      </div>
+      <nimble-button id="upload-close" appearance="ghost">Close</nimble-button>
+      <nimble-button id="upload-ok" appearance="accent" disabled>Import</nimble-button>
+    </footer>
+  </aside>
+
+  <!-- Image lightbox -->
+  <div id="img-lightbox" class="img-lightbox" hidden>
+    <img id="img-lightbox-img" alt="Enlarged image" />
+  </div>
+  </nimble-theme-provider>
+
+  <script src="app.js"></script>
+</body>
+</html>

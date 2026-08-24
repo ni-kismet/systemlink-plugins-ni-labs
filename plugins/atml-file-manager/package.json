@@ -1,0 +1,17 @@
+{
+  "name": "atml-file-manager",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Browse SystemLink files, render ATML (IEEE 1671/1636) test results in a readable summary and step tree, and import ATML files as native Test Monitor results.",
+  "license": "NI-SCL",
+  "homepage": "https://github.com/ni-kismet/systemlink-plugins-ni-labs",
+  "scripts": {
+    "clean": "rm -rf dist submission-manifest.json",
+    "build": "node scripts/build.js",
+    "package": "npm run clean && npm run build && node ../../scripts/build-plugin-package.mjs . && node ../../scripts/verify-plugin-package.mjs .",
+    "submission-manifest": "npm run package && node ../../scripts/create-submission-manifest.mjs .",
+    "sbom": "node -e \"require('fs').mkdirSync('sbom',{recursive:true})\" && npm run sbom:cyclonedx && npm run sbom:spdx",
+    "sbom:cyclonedx": "npm sbom --sbom-format cyclonedx --sbom-type application > sbom/ATMLFileManager.cyclonedx.json",
+    "sbom:spdx": "npm sbom --sbom-format spdx --sbom-type application > sbom/ATMLFileManager.spdx.json"
+  }
+}
