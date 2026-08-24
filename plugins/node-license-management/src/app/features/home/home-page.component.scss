@@ -1,0 +1,262 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: var(--ni-nimble-medium-padding);
+  margin: calc(-1 * var(--ni-nimble-medium-padding)) calc(-1 * var(--ni-nimble-medium-padding)) 0;
+  padding: var(--ni-nimble-medium-padding);
+  background: var(--ni-nimble-header-background-color);
+  border-bottom: 1px solid var(--app-divider);
+}
+
+.app-header__glyph {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  color: #3aa655;
+}
+
+.app-header__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.app-header__title {
+  margin: 0;
+  font: var(--ni-nimble-title-font);
+}
+
+.app-header__subtitle {
+  margin: 0;
+  color: var(--app-muted);
+  font: var(--ni-nimble-subtitle-font);
+}
+
+.app-header__actions {
+  margin-left: auto;
+  flex: none;
+  display: flex;
+  gap: var(--ni-nimble-standard-padding);
+}
+
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--ni-nimble-large-padding);
+  margin: calc(-1 * var(--ni-nimble-medium-padding)) calc(-1 * var(--ni-nimble-medium-padding)) 0;
+  padding: var(--ni-nimble-medium-padding);
+  background: var(--app-surface);
+  border-bottom: 1px solid var(--app-border);
+}
+
+.summary__item {
+  display: flex;
+  align-items: center;
+  gap: var(--ni-nimble-medium-padding);
+  padding: var(--ni-nimble-small-padding) var(--ni-nimble-large-padding);
+  border: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.summary__item:hover {
+  background: var(--app-highlight-soft);
+}
+
+.summary__item--active {
+  background: var(--app-highlight-soft);
+}
+
+.summary__value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.summary__label {
+  color: var(--app-muted);
+  font: var(--ni-nimble-subtitle-font);
+  font-weight: 600;
+}
+
+.dashboard__charts {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: var(--ni-nimble-medium-padding);
+}
+
+.chart-card {
+  padding: var(--ni-nimble-small-padding) var(--ni-nimble-medium-padding);
+  background: var(--app-surface-raised);
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+}
+
+.chart-card h3 {
+  margin: 0 0 var(--ni-nimble-small-padding);
+  font: var(--ni-nimble-subtitle-font);
+  color: var(--app-muted);
+}
+
+.chart-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ni-nimble-small-padding);
+}
+
+.chart-card__body--pie {
+  align-items: center;
+}
+
+.pie {
+  width: 100%;
+  max-width: 240px;
+  height: auto;
+}
+
+.pie path,
+.bars rect {
+  cursor: pointer;
+}
+
+.pie__label {
+  fill: #ffffff;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.bars {
+  width: 100%;
+  height: auto;
+}
+
+.bars__grid line {
+  stroke: var(--app-divider);
+  stroke-width: 1;
+}
+
+.bars__axis-label,
+.bars__month {
+  fill: var(--ni-nimble-body-font-color);
+  font-size: 12px;
+}
+
+.bars__value {
+  fill: #ffffff;
+  font-size: 12px;
+}
+
+.bars__total {
+  fill: var(--app-strong);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.legend {
+  display: flex;
+  gap: var(--ni-nimble-large-padding);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--app-muted);
+  font: var(--ni-nimble-subtitle-font);
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: var(--ni-nimble-small-padding);
+}
+
+.legend__swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+.dashboard__table {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+}
+
+.table-spinner {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  z-index: 5;
+  height: 16px;
+  width: 16px;
+}
+
+.dashboard__table nimble-table {
+  width: 100%;
+  height: 100%;
+}
+
+.chart-tooltip {
+  position: fixed;
+  z-index: 1000;
+  pointer-events: none;
+  padding: 4px 8px;
+  background: rgba(20, 20, 20, 0.82);
+  color: #ffffff;
+  font: var(--ni-nimble-subtitle-font);
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.chart-tooltip--wide {
+  white-space: normal;
+  max-width: 320px;
+  line-height: 1.35;
+}
+
+.pie__slice,
+.bars__seg {
+  cursor: pointer;
+  // Gap-colored border (page background) to clearly delineate adjacent segments.
+  stroke: var(--app-background);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  transition: opacity 0.12s ease, stroke-width 0.12s ease;
+}
+
+.bars__seg {
+  stroke-width: 1;
+}
+
+.pie__slice--active {
+  stroke: #ffffff;
+  stroke-width: 2;
+}
+
+.bars__seg--active {
+  stroke: #ffffff;
+  stroke-width: 1.5;
+}
+
+.pie__slice--dim,
+.bars__seg--dim {
+  opacity: 0.4;
+}
+
+@media (max-width: 900px) {
+  .dashboard__charts {
+    grid-template-columns: 1fr;
+  }
+}
+
