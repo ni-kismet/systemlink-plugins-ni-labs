@@ -5,6 +5,8 @@
   "scripts": {
     "start": "ng serve --open",
     "build": "ng build --configuration production && node ./scripts/fix-csp-index.js",
+    "postbuild": "npm run sbom",
+    "sbom": "node -e \"require('fs').mkdirSync('sbom',{recursive:true})\" && npm sbom --sbom-format cyclonedx --sbom-type application > sbom/SystemLink-Health-Viewer.cyclonedx.json && npm sbom --sbom-format spdx --sbom-type application > sbom/SystemLink-Health-Viewer.spdx.json",
     "clean": "rm -rf dist submission-manifest.json",
     "package": "npm run clean && npm run build && node ../../scripts/build-plugin-package.mjs . && node ../../scripts/verify-plugin-package.mjs .",
     "submission-manifest": "npm run package && node ../../scripts/create-submission-manifest.mjs .",
