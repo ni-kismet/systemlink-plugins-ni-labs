@@ -56,6 +56,49 @@ header h1 {
     align-items: center;
 }
 
+.header-search-field {
+    position: relative;
+    min-width: 220px;
+    max-width: 300px;
+    flex: 0 0 auto;
+}
+
+.header-search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--ni-nimble-placeholder-font-color);
+    pointer-events: none;
+    z-index: 2;
+}
+
+.header-search-field ok-fv-search-input {
+    width: 100%;
+}
+
+.header-search-field ok-fv-search-input::part(input) {
+    padding-left: 30px;
+}
+
+.header-search-field ok-fv-search-input::part(search-field) {
+    padding-left: 30px;
+}
+
+.header-actions ok-fv-search-input {
+    min-width: 220px;
+    max-width: 300px;
+}
+
+.time-range-mount .trc-btn {
+    min-width: 210px;
+    height: 32px;
+}
+
+.header-actions nimble-button#cardViewToggleBtn {
+    min-width: 40px;
+}
+
 /* Filter Toolbar */
 .filter-toolbar {
     flex-shrink: 0;
@@ -66,11 +109,53 @@ header h1 {
 
 .filter-toolbar nimble-select {
     min-width: 150px;
+    max-width: 220px;
 }
 
-.filter-toolbar ok-fv-search-input {
-    min-width: 200px;
+/* Color legend */
+.type-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    padding: 6px 0 10px;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--ni-nimble-divider-background-color);
+    margin-bottom: 12px;
 }
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font: var(--ni-nimble-control-label-font);
+    color: var(--ni-nimble-body-font-color);
+    white-space: nowrap;
+}
+
+.legend-item::before {
+    content: '';
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+.legend-item.type-testplan::before       { background: #009B65; }
+.legend-item.type-workorder::before      { background: #8B1E2D; }
+.legend-item.type-maintenance::before    { background: #FF4B00; }
+.legend-item.type-calibration::before    { background: #E54C8A; }
+.legend-item.type-job::before            { background: #804AD9; }
+.legend-item.type-reservation::before    { background: #00A1D4; }
+.legend-item.type-transportorder::before { background: #6F4E37; }
+
+[data-theme="dark"] .legend-item.type-testplan::before       { background: #009B65; }
+[data-theme="dark"] .legend-item.type-workorder::before      { background: #C84D5A; }
+[data-theme="dark"] .legend-item.type-maintenance::before    { background: #FF8126; }
+[data-theme="dark"] .legend-item.type-calibration::before    { background: #E54C8A; }
+[data-theme="dark"] .legend-item.type-job::before            { background: #A46EFF; }
+[data-theme="dark"] .legend-item.type-reservation::before    { background: #00A1D4; }
+[data-theme="dark"] .legend-item.type-transportorder::before { background: #9B7A60; }
 
 /* Loading */
 .board-loading {
@@ -195,7 +280,7 @@ header h1 {
 /* Card background and left accent by work item type (Nimble calendar-event tokens) */
 /* Light theme */
 .kanban-card.type-testplan      { background: #E6F5F0; border-left-color: #009B65; }
-.kanban-card.type-workorder     { background: #E6F5F0; border-left-color: #00734B; }
+.kanban-card.type-workorder     { background: #FBECEE; border-left-color: #8B1E2D; }
 .kanban-card.type-maintenance   { background: #FFEDE6; border-left-color: #FF4B00; }
 .kanban-card.type-calibration   { background: #FDEEF4; border-left-color: #E54C8A; }
 .kanban-card.type-job           { background: #F3EDFC; border-left-color: #804AD9; }
@@ -203,7 +288,7 @@ header h1 {
 .kanban-card.type-transportorder { background: #F1EEEB; border-left-color: #6F4E37; }
 /* Dark theme */
 [data-theme="dark"] .kanban-card.type-testplan      { background: #364941; border-left-color: #009B65; }
-[data-theme="dark"] .kanban-card.type-workorder     { background: #364941; border-left-color: #008557; }
+[data-theme="dark"] .kanban-card.type-workorder     { background: #2F1B1E; border-left-color: #C84D5A; }
 [data-theme="dark"] .kanban-card.type-maintenance   { background: #4A3E36; border-left-color: #FF8126; }
 [data-theme="dark"] .kanban-card.type-calibration   { background: #483A41; border-left-color: #E54C8A; }
 [data-theme="dark"] .kanban-card.type-job           { background: #413D4C; border-left-color: #A46EFF; }
@@ -226,14 +311,14 @@ header h1 {
 
 /* Title colors by work item type */
 .kanban-card.type-testplan .card-title      { color: #009B65; }
-.kanban-card.type-workorder .card-title     { color: #00734B; }
+.kanban-card.type-workorder .card-title     { color: #8B1E2D; }
 .kanban-card.type-maintenance .card-title   { color: #FF4B00; }
 .kanban-card.type-calibration .card-title   { color: #E54C8A; }
 .kanban-card.type-job .card-title           { color: #804AD9; }
 .kanban-card.type-reservation .card-title   { color: #00A1D4; }
 .kanban-card.type-transportorder .card-title { color: #6F4E37; }
 [data-theme="dark"] .kanban-card.type-testplan .card-title      { color: #009B65; }
-[data-theme="dark"] .kanban-card.type-workorder .card-title     { color: #008557; }
+[data-theme="dark"] .kanban-card.type-workorder .card-title     { color: #E07A86; }
 [data-theme="dark"] .kanban-card.type-maintenance .card-title   { color: #FF8126; }
 [data-theme="dark"] .kanban-card.type-calibration .card-title   { color: #E54C8A; }
 [data-theme="dark"] .kanban-card.type-job .card-title           { color: #A46EFF; }
@@ -283,6 +368,61 @@ header h1 {
     justify-content: space-between;
     align-items: center;
     margin-top: 4px;
+}
+
+.kanban-card.expanded .card-footer {
+    margin-top: 8px;
+}
+
+.card-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px 10px;
+    margin-top: 6px;
+}
+
+.card-detail-item {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.card-detail-item-wide {
+    grid-column: 1 / -1;
+}
+
+.card-detail-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ni-nimble-placeholder-font-color);
+}
+
+.card-detail-value {
+    font-size: 11px;
+    color: var(--ni-nimble-body-font-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.card-description-block {
+    display: flex;
+    flex-direction: column;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid color-mix(in srgb, var(--ni-nimble-divider-background-color) 70%, transparent);
+}
+
+.card-description-text {
+    font-size: 11px;
+    color: var(--ni-nimble-body-font-color);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    line-clamp: 2;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
 }
 
 .card-assignee {
@@ -409,17 +549,30 @@ header h1 {
     white-space: nowrap;
 }
 
-.drawer-subtitle {
-    color: var(--ni-nimble-link-font-color, var(--ni-nimble-body-link-font-color, var(--ni-nimble-body-font-color)));
+.drawer-subtitle,
+.drawer-parent-link {
+    color: var(--ni-nimble-link-font-color, var(--ni-nimble-body-link-font-color, #0a58ca));
     font: var(--ni-nimble-body-font);
-    text-decoration: none;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    display: inline-block;
+    max-width: 100%;
 }
 
-.drawer-subtitle:hover {
-    text-decoration: underline;
+.drawer-subtitle:hover,
+.drawer-parent-link:hover {
+    color: var(--ni-nimble-link-active-font-color, var(--ni-nimble-body-link-active-font-color, #084298));
+}
+
+.drawer-subtitle:focus-visible,
+.drawer-parent-link:focus-visible {
+    outline: 2px solid var(--ni-nimble-focus-inner-outline-color);
+    outline-offset: 2px;
+    border-radius: 2px;
 }
 
 .drawer-body {

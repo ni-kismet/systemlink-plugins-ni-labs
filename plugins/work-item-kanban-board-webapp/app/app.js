@@ -63,9 +63,7 @@ const TYPE_ICONS = {
 const kanbanBoard = document.getElementById('kanbanBoard');
 const boardLoading = document.getElementById('boardLoading');
 const refreshBtn = document.getElementById('refreshBtn');
-const typeFilter = document.getElementById('typeFilter');
-const assigneeFilter = document.getElementById('assigneeFilter');
-const workspaceFilter = document.getElementById('workspaceFilter');
+const cardViewToggleBtn = document.getElementById('cardViewToggleBtn');
 const searchFilter = document.getElementById('searchFilter');
 const detailDrawer = document.getElementById('detailDrawer');
 const drawerBackdrop = document.getElementById('drawerBackdrop');
@@ -86,6 +84,22 @@ let allWorkspaces = [];     // { id, name, enabled, default }
 let draggedItem = null;
 let draggedCardEl = null;
 let currentDrawerItem = null;
+
+// ─── Multi-select filter controls (MultiSelectControl instances) ─
+const msControls = { type: null, workspace: null, assignee: null };
+
+function getMsSelected(key) {
+    return new Set(msControls[key] ? msControls[key].getSelected() : []);
+}
+
+const CARD_VIEW_MODES = {
+    compressed: 'compressed',
+    expanded: 'expanded',
+};
+let cardViewMode = CARD_VIEW_MODES.compressed;
+
+const DEFAULT_CREATION_WINDOW = '30d';
+let timeRangeControl = null;
 
 // ─── Initialize ─────────────────────────────────────────────────
 
@@ -156,15 +170,66 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch {}
     }
 
+    try {
+        const savedCardViewMode = localStorage.getItem('kanban_card_view_mode');
+        if (savedCardViewMode === CARD_VIEW_MODES.expanded || savedCardViewMode === CARD_VIEW_MODES.compressed) {
+            cardViewMode = savedCardViewMode;
+        }
+    } catch {}
+
+    updateCardViewToggleButton();
     setupEventListeners();
-    Promise.all([loadWorkItemTypes(), loadAllUsers(), loadWorkspaces()]).then(() => loadWorkItems());
+    // Wire multi-select filter controls
+    msControls.workspace = MultiSelectControl.create({
+        mount: '#workspaceMsMount',
+        label: 'Workspace',
+        onChange: () => {
+            populateTypeFilter();
+            populateAssigneeFilter();
+            renderBoard();
+        },
+    });
+    msControls.type = MultiSelectControl.create({
+        mount: '#typeMsMount',
+        label: 'Type',
+        onChange: () => renderBoard(),
+    });
+    msControls.assignee = MultiSelectControl.create({
+        mount: '#assigneeMsMount',
+        label: 'Assigned To',
+        onChange: () => renderBoard(),
+    });
+    void loadWorkItems();
+    void loadWorkItemTypes();
+    void loadAllUsers();
+    void loadWorkspaces();
 });
 
 function setupEventListeners() {
     refreshBtn.addEventListener('click', loadWorkItems);
-    typeFilter.addEventListener('change', renderBoard);
-    workspaceFilter.addEventListener('change', renderBoard);
-    assigneeFilter.addEventListener('change', renderBoard);
+    cardViewToggleBtn.addEventListener('click', () => {
+        cardViewMode = cardViewMode === CARD_VIEW_MODES.compressed ? CARD_VIEW_MODES.expanded : CARD_VIEW_MODES.compressed;
+        try {
+            localStorage.setItem('kanban_card_view_mode', cardViewMode);
+        } catch {}
+        updateCardViewToggleButton();
+        renderBoard();
+    });
+    timeRangeControl = TimeRangeControl.create({
+        mount: '#timeRangeMount',
+        nimble: true,
+        label: 'Select creation time range',
+        presets: {
+            '24h': 'Last 24 hours',
+            '7d': 'Last 7 days',
+            '15d': 'Last 15 days',
+            '30d': 'Last 30 days',
+            '60d': 'Last 2 months',
+            '180d': 'Last 6 months',
+        },
+        defaultValue: DEFAULT_CREATION_WINDOW,
+        onChange: () => renderBoard(),
+    });
     searchFilter.addEventListener('input', debounce(renderBoard, 300));
     drawerBackdrop.addEventListener('click', closeDrawer);
     drawerCloseBtn.addEventListener('click', closeDrawer);
@@ -186,6 +251,17 @@ function setupEventListeners() {
         col.addEventListener('dragleave', onDragLeave);
         col.addEventListener('drop', onDrop);
     }
+}
+
+function updateCardViewToggleButton() {
+    if (!cardViewToggleBtn) return;
+
+    const isExpanded = cardViewMode === CARD_VIEW_MODES.expanded;
+    cardViewToggleBtn.title = isExpanded ? 'Compress details' : 'Expand details';
+    cardViewToggleBtn.setAttribute('aria-label', isExpanded ? 'Compress details' : 'Expand details');
+    cardViewToggleBtn.innerHTML = isExpanded
+        ? '<nimble-icon-arrow-down-right-and-arrow-up-left slot="start"></nimble-icon-arrow-down-right-and-arrow-up-left>Compress details'
+        : '<nimble-icon-arrow-up-left-and-arrow-down-right slot="start"></nimble-icon-arrow-up-left-and-arrow-down-right>Expand details';
 }
 
 function getSystemLinkErrorMessage(result) {
@@ -250,18 +326,22 @@ async function loadWorkItemTypes() {
     }
 }
 
-function populateTypeFilter() {
-    // Keep the "All Types" default option
-    const seenTypes = new Set();
-    for (const t of workItemTypes) {
-        if (t.type && !seenTypes.has(t.type)) {
-            seenTypes.add(t.type);
-            const opt = document.createElement('nimble-list-option');
-            opt.value = t.type;
-            opt.textContent = TYPE_LABELS[t.type] || t.type;
-            typeFilter.appendChild(opt);
-        }
+function getWorkspaceScopedItems() {
+    const wsSelected = getMsSelected('workspace');
+    if (wsSelected.size === 0) {
+        return allWorkItems;
     }
+    return allWorkItems.filter(w => wsSelected.has(w.workspace));
+}
+
+function populateTypeFilter() {
+    if (!msControls.type) return;
+    const scopedItems = getWorkspaceScopedItems();
+    const availableTypes = new Set(scopedItems.map(w => w.type).filter(Boolean));
+    const typeOptions = [...availableTypes]
+        .map(type => ({ value: type, label: TYPE_LABELS[type] || type }))
+        .sort((a, b) => a.label.localeCompare(b.label));
+    msControls.type.setOptions(typeOptions);
 }
 
 async function loadWorkItems() {
@@ -280,7 +360,7 @@ async function loadWorkItems() {
                     'ID', 'NAME', 'TYPE', 'STATE', 'SUBSTATE',
                     'ASSIGNED_TO', 'REQUESTED_BY', 'PART_NUMBER',
                     'DESCRIPTION', 'UPDATED_AT', 'CREATED_AT',
-                    'TIMELINE', 'SCHEDULE', 'WORKSPACE', 'PROPERTIES',
+                    'TIMELINE', 'SCHEDULE', 'PARENT_ID', 'WORKSPACE', 'PROPERTIES',
                 ],
             };
             if (continuationToken) {
@@ -298,6 +378,7 @@ async function loadWorkItems() {
         } while (continuationToken);
 
         allWorkItems = allItems;
+        populateTypeFilter();
         populateAssigneeFilter();
         renderBoard();
     } catch (err) {
@@ -343,13 +424,10 @@ async function loadWorkspaces() {
         }));
         allWorkspaces = (data?.workspaces || []).filter(w => w.enabled !== false);
         // Populate workspace filter
-        for (const ws of allWorkspaces.sort((a, b) => (a.name || '').localeCompare(b.name || ''))) {
-            const opt = document.createElement('nimble-list-option');
-            opt.value = ws.id;
-            opt.textContent = ws.name || ws.id;
-            if (ws.default) opt.textContent += ' (default)';
-            workspaceFilter.appendChild(opt);
-        }
+        const workspaceOptions = allWorkspaces
+            .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+            .map(ws => ({ value: ws.id, label: (ws.name || ws.id) + (ws.default ? ' (default)' : '') }));
+        msControls.workspace?.setOptions(workspaceOptions);
     } catch (err) {
         console.warn('Failed to load workspaces:', err);
     }
@@ -380,6 +458,11 @@ async function loadAllUsers() {
             }
             continuationToken = data?.continuationToken || null;
         } while (continuationToken);
+
+        if (allWorkItems.length > 0) {
+            populateAssigneeFilter();
+            renderBoard();
+        }
     } catch (err) {
         console.warn('Failed to load users:', err);
     }
@@ -391,26 +474,15 @@ function getUserDisplayName(userId) {
 }
 
 function populateAssigneeFilter() {
-    const currentVal = assigneeFilter.value;
-    // Remove all options except the first "All" option
-    while (assigneeFilter.children.length > 1) {
-        assigneeFilter.removeChild(assigneeFilter.lastChild);
-    }
-    // Collect user IDs that have at least one work item assigned
-    const activeUserIds = new Set(allWorkItems.map(w => w.assignedTo).filter(Boolean));
+    if (!msControls.assignee) return;
+    const scopedItems = getWorkspaceScopedItems();
+    const options = [{ value: '', label: 'Unassigned' }];
+    const activeUserIds = new Set(scopedItems.map(w => w.assignedTo).filter(Boolean));
     const sorted = [...activeUserIds]
-        .map(id => [id, getUserDisplayName(id)])
-        .sort((a, b) => a[1].localeCompare(b[1]));
-    for (const [id, name] of sorted) {
-        const opt = document.createElement('nimble-list-option');
-        opt.value = id;
-        opt.textContent = name;
-        assigneeFilter.appendChild(opt);
-    }
-    // Restore previous selection if still valid
-    if (currentVal && activeUserIds.has(currentVal)) {
-        assigneeFilter.value = currentVal;
-    }
+        .map(id => ({ value: id, label: getUserDisplayName(id) }))
+        .sort((a, b) => a.label.localeCompare(b.label));
+    options.push(...sorted);
+    msControls.assignee.setOptions(options);
 }
 
 // ─── Rendering ──────────────────────────────────────────────────
@@ -418,19 +490,27 @@ function populateAssigneeFilter() {
 function getFilteredItems() {
     let items = allWorkItems;
 
-    const typeVal = typeFilter.value;
-    if (typeVal) {
-        items = items.filter(w => w.type === typeVal);
+    const createdRange = timeRangeControl ? timeRangeControl.getRange() : null;
+    if (createdRange) {
+        items = items.filter(w => {
+            const createdAt = getWorkItemCreatedAt(w);
+            return createdAt && createdAt >= createdRange.start && createdAt <= createdRange.end;
+        });
     }
 
-    const workspaceVal = workspaceFilter.value;
-    if (workspaceVal) {
-        items = items.filter(w => w.workspace === workspaceVal);
+    const typeSel = getMsSelected('type');
+    if (typeSel.size > 0) {
+        items = items.filter(w => typeSel.has(w.type));
     }
 
-    const assigneeVal = assigneeFilter.value;
-    if (assigneeVal) {
-        items = items.filter(w => w.assignedTo === assigneeVal);
+    const wsSel = getMsSelected('workspace');
+    if (wsSel.size > 0) {
+        items = items.filter(w => wsSel.has(w.workspace));
+    }
+
+    const assigneeSel = getMsSelected('assignee');
+    if (assigneeSel.size > 0) {
+        items = items.filter(w => assigneeSel.has(w.assignedTo || ''));
     }
 
     const searchVal = (searchFilter.value || '').trim().toLowerCase();
@@ -444,6 +524,16 @@ function getFilteredItems() {
     }
 
     return items;
+}
+
+function getWorkItemCreatedAt(item) {
+    const rawCreatedAt = item?.createdAt || item?.CREATED_AT || item?.created_at;
+    if (!rawCreatedAt) {
+        return null;
+    }
+
+    const createdAt = new Date(rawCreatedAt);
+    return Number.isNaN(createdAt.getTime()) ? null : createdAt;
 }
 
 const CARD_RENDER_LIMIT = 50;
@@ -486,7 +576,7 @@ function renderBoard() {
 
 function createCard(item) {
     const card = document.createElement('div');
-    card.className = `kanban-card type-${item.type || 'unknown'}`;
+    card.className = `kanban-card type-${item.type || 'unknown'} ${cardViewMode === CARD_VIEW_MODES.expanded ? 'expanded' : 'compressed'}`;
     card.draggable = true;
     card.dataset.workItemId = item.id;
     card.dataset.state = item.state;
@@ -497,14 +587,56 @@ function createCard(item) {
         new Date(dueDate) < new Date() &&
         item.state !== 'CLOSED';
     const hasScheduleDates = item.schedule?.plannedStartDateTime || item.schedule?.plannedEndDateTime;
+    const plannedStartDate = item.schedule?.plannedStartDateTime;
+    const plannedEndDate = item.schedule?.plannedEndDateTime;
+    const earliestStartDate = item.timeline?.earliestStartDateTime;
+    const dueTimelineDate = item.timeline?.dueDateTime;
+    const cardStartLabel = plannedStartDate ? 'Start' : (earliestStartDate ? 'Earliest' : 'Start');
+    const cardEndLabel = plannedEndDate ? 'End' : (dueTimelineDate ? 'Due' : 'End');
+    const cardStartValue = plannedStartDate || earliestStartDate;
+    const cardEndValue = plannedEndDate || dueTimelineDate;
     const scheduledIndex = STATES.indexOf('SCHEDULED');
     const stateIndex = STATES.indexOf(item.state);
     const isPreScheduled = stateIndex >= 0 && stateIndex < scheduledIndex;
+    const partNumber = item.partNumber || '—';
+    const parentWorkItem = getParentWorkItemSummary(item);
+    const description = (item.description || '').trim();
+    const descriptionPreview = description ? truncateText(description, 120) : '—';
+    const parentWorkItemDetail = parentWorkItem
+        ? `
+            <div class="card-detail-item card-detail-item-wide">
+                <span class="card-detail-label">Parent</span>
+                <span class="card-detail-value" title="${escapeAttr(parentWorkItem.label)}"><a href="${escapeAttr(getParentWorkItemUrl(parentWorkItem.id))}" target="_blank" rel="noopener noreferrer">${escapeHtml(parentWorkItem.label)}</a></span>
+            </div>`
+        : '';
+    const expandedDetails = cardViewMode === CARD_VIEW_MODES.expanded
+        ? `
+        <div class="card-detail-grid">
+            <div class="card-detail-item">
+                <span class="card-detail-label">${cardStartLabel}</span>
+                <span class="card-detail-value" title="${escapeAttr(formatCardDateTime(cardStartValue))}">${escapeHtml(formatCardDateTime(cardStartValue))}</span>
+            </div>
+            <div class="card-detail-item">
+                <span class="card-detail-label">${cardEndLabel}</span>
+                <span class="card-detail-value" title="${escapeAttr(formatCardDateTime(cardEndValue))}">${escapeHtml(formatCardDateTime(cardEndValue))}</span>
+            </div>
+            <div class="card-detail-item card-detail-item-wide">
+                <span class="card-detail-label">Part Number</span>
+                <span class="card-detail-value" title="${escapeAttr(partNumber)}">${escapeHtml(partNumber)}</span>
+            </div>
+            ${parentWorkItemDetail}
+        </div>
+        <div class="card-description-block" title="${escapeAttr(description || 'No description')}">
+            <span class="card-detail-label">Description</span>
+            <span class="card-description-text">${escapeHtml(descriptionPreview)}</span>
+        </div>`
+        : '';
 
     card.innerHTML = `
         <div class="card-title">${escapeHtml(item.name || 'Untitled')}</div>
         ${!isPreScheduled && !hasScheduleDates
             ? `<span class="card-unscheduled" title="Not yet scheduled">Unscheduled</span>` : ''}
+        ${expandedDetails}
         <div class="card-footer">
             <span class="card-assignee" title="${escapeAttr(assignee)}">
                 ${escapeHtml(assignee)}
@@ -747,6 +879,11 @@ function getWorkItemDetailsUrl(workItemId) {
     return `${baseUrl}/labmanagement/workitems/workitem/${encodeURIComponent(workItemId)}/assets`;
 }
 
+function getParentWorkItemUrl(workItemId) {
+    const baseUrl = getSystemLinkBaseUrl();
+    return `${baseUrl}/labmanagement/workorders/workorder/${encodeURIComponent(workItemId)}/workitems`;
+}
+
 function openDrawer(item) {
     currentDrawerItem = item;
     drawerTitle.textContent = item.name || 'Work Item';
@@ -761,6 +898,11 @@ function openDrawer(item) {
     }
     drawerBody.innerHTML = renderDrawerContent(item);
     wirePropertyButtons();
+    // Nimble custom elements need value set imperatively after insertion into DOM
+    const assigneeSelect = document.getElementById('edit-assignee');
+    if (assigneeSelect) assigneeSelect.value = item.assignedTo || '';
+    const descriptionArea = document.getElementById('edit-description');
+    if (descriptionArea) descriptionArea.value = item.description || '';
     detailDrawer.hidden = false;
     document.body.style.overflow = 'hidden';
 }
@@ -845,18 +987,13 @@ async function saveDrawerChanges() {
             propsChanged = true;
         }
     }
-    const removedPropertyKeys = Object.keys(originalProperties).filter(origKey => !(origKey in newProperties));
-    // Check if any original keys were removed
-    if (!propsChanged && Object.keys(originalProperties).length > 0) {
-        for (const origKey of Object.keys(originalProperties)) {
-            if (!(origKey in newProperties)) {
-                propsChanged = true;
-                break;
-            }
-        }
+    const removedPropertyKeys = Object.keys(originalProperties).filter(originalKey => !(originalKey in newProperties));
+    if (removedPropertyKeys.length > 0) {
+        propsChanged = true;
     }
     if (propsChanged) {
-        updates.properties = Object.keys(newProperties).length > 0 ? newProperties : null;
+        // Replace the key-value pair field so removed properties are deleted by omission.
+        updates.properties = newProperties;
         changed = true;
     }
 
@@ -866,14 +1003,16 @@ async function saveDrawerChanges() {
     }
 
     try {
-        const data = await persistWorkItemUpdates([updates], {
-            replace: removedPropertyKeys.length > 0,
-        });
+        const data = await persistWorkItemUpdates([updates], { replace: propsChanged });
         if (data?.updatedWorkItems?.length > 0) {
             const updated = data.updatedWorkItems[0];
             const idx = allWorkItems.findIndex(w => w.id === currentDrawerItem.id);
             if (idx !== -1) {
-                allWorkItems[idx] = { ...allWorkItems[idx], ...updated };
+                allWorkItems[idx] = {
+                    ...allWorkItems[idx],
+                    ...updated,
+                    ...(propsChanged ? { properties: updates.properties ?? null } : {}),
+                };
             }
         }
 
@@ -891,8 +1030,22 @@ function renderDrawerContent(item) {
     const typeIcon = TYPE_ICONS[item.type] || '📄';
     const createdAt = item.createdAt ? new Date(item.createdAt).toLocaleString() : '—';
     const updatedAt = item.updatedAt ? new Date(item.updatedAt).toLocaleString() : '—';
-    const plannedStartAt = item.schedule?.plannedStartDateTime ? new Date(item.schedule.plannedStartDateTime).toLocaleString() : '—';
-    const plannedEndAt = item.schedule?.plannedEndDateTime ? new Date(item.schedule.plannedEndDateTime).toLocaleString() : '—';
+    const plannedStartDate = item.schedule?.plannedStartDateTime;
+    const plannedEndDate = item.schedule?.plannedEndDateTime;
+    const earliestStartDate = item.timeline?.earliestStartDateTime;
+    const dueTimelineDate = item.timeline?.dueDateTime;
+    const plannedStartDisplay = plannedStartDate ? new Date(plannedStartDate).toLocaleString() : '—';
+    const plannedEndDisplay = plannedEndDate ? new Date(plannedEndDate).toLocaleString() : '—';
+    const earliestStartDisplay = earliestStartDate ? new Date(earliestStartDate).toLocaleString() : '—';
+    const dueDateDisplay = dueTimelineDate ? new Date(dueTimelineDate).toLocaleString() : '—';
+    const parentWorkItem = getParentWorkItemSummary(item);
+    const parentWorkItemField = parentWorkItem
+        ? `
+        <div class="drawer-field">
+            <span class="drawer-label">Parent</span>
+            <span class="drawer-value"><a class="drawer-parent-link" href="${escapeAttr(getParentWorkItemUrl(parentWorkItem.id))}" target="_blank" rel="noopener noreferrer">${escapeHtml(parentWorkItem.label)}</a></span>
+        </div>`
+        : '';
 
     // Build assignee options
     const sortedUsers = Object.entries(userDisplayNames)
@@ -911,6 +1064,7 @@ function renderDrawerContent(item) {
             <span class="drawer-label">Type</span>
             <span class="drawer-value">${typeIcon} ${escapeHtml(typeLabel)}</span>
         </div>
+        ${parentWorkItemField}
         <div class="drawer-edit-field">
             <label class="drawer-label" for="edit-name">Name</label>
             <nimble-text-field id="edit-name" appearance="underline" value="${escapeAttr(item.name || '')}"></nimble-text-field>
@@ -934,11 +1088,19 @@ function renderDrawerContent(item) {
         </div>
         <div class="drawer-field">
             <span class="drawer-label">Planned Start</span>
-            <span class="drawer-value">${escapeHtml(plannedStartAt)}</span>
+            <span class="drawer-value">${escapeHtml(plannedStartDisplay)}</span>
         </div>
         <div class="drawer-field">
             <span class="drawer-label">Planned End</span>
-            <span class="drawer-value">${escapeHtml(plannedEndAt)}</span>
+            <span class="drawer-value">${escapeHtml(plannedEndDisplay)}</span>
+        </div>
+        <div class="drawer-field">
+            <span class="drawer-label">Earliest Start</span>
+            <span class="drawer-value">${escapeHtml(earliestStartDisplay)}</span>
+        </div>
+        <div class="drawer-field">
+            <span class="drawer-label">Due Date</span>
+            <span class="drawer-value">${escapeHtml(dueDateDisplay)}</span>
         </div>
         <div class="drawer-field">
             <span class="drawer-label">Created</span>
@@ -950,7 +1112,7 @@ function renderDrawerContent(item) {
         </div>
         <div class="drawer-edit-field full-width">
             <label class="drawer-label" for="edit-description">Description</label>
-            <nimble-text-area id="edit-description" appearance="outline" rows="5">${escapeHtml(item.description || '')}</nimble-text-area>
+            <nimble-text-area id="edit-description" appearance="outline" rows="5"></nimble-text-area>
         </div>
         ${item.properties && Object.keys(item.properties).length > 0 ? `
         <div class="drawer-edit-field full-width">
@@ -996,6 +1158,67 @@ function formatRelativeDate(isoString) {
     if (diffDays === 1) return 'Tomorrow';
     if (diffDays <= 7) return `${diffDays}d`;
     return date.toLocaleDateString();
+}
+
+function formatCardDateTime(isoString) {
+    if (!isoString) return '—';
+    const date = new Date(isoString);
+    if (Number.isNaN(date.getTime())) return '—';
+    return date.toLocaleString(undefined, {
+        dateStyle: 'short',
+        timeStyle: 'short',
+    });
+}
+
+function getParentWorkItemSummary(item) {
+    if (!item) return null;
+
+    const candidates = [];
+    const pushCandidate = (value) => {
+        if (!value) return;
+        const text = String(value).trim();
+        if (!text) return;
+        if (!candidates.includes(text)) {
+            candidates.push(text);
+        }
+    };
+
+    // Common direct parent fields.
+    pushCandidate(item.parentId);
+    pushCandidate(item.parentID);
+    pushCandidate(item.parentWorkItemId);
+    pushCandidate(item.parent?.id);
+    pushCandidate(item.parent?.workItemId);
+    pushCandidate(item.parentWorkItem?.id);
+
+    // Heuristic match for parent-related custom properties.
+    if (item.properties && typeof item.properties === 'object') {
+        for (const [key, value] of Object.entries(item.properties)) {
+            if (!key) continue;
+            if (/parent|work\s*order/i.test(String(key))) {
+                pushCandidate(value);
+            }
+        }
+    }
+
+    for (const candidate of candidates) {
+        const parent = allWorkItems.find(w => w.id === candidate);
+        if (parent) {
+            const label = (parent.name || '').trim();
+            return { id: candidate, label: label ? `${label} (${candidate})` : candidate };
+        }
+    }
+
+    if (candidates[0]) {
+        return { id: candidates[0], label: candidates[0] };
+    }
+
+    return null;
+}
+
+function truncateText(text, maxLength) {
+    if (!text || text.length <= maxLength) return text;
+    return `${text.slice(0, maxLength - 3)}...`;
 }
 
 function debounce(fn, ms) {
