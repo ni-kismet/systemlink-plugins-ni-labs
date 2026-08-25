@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Browse SystemLink files, render ATML (IEEE 1671/1636) test results in a readable summary and step tree, and import ATML files as native Test Monitor results.",
-  "license": "NI-SCL",
+  "license": "MIT",
   "homepage": "https://github.com/ni-kismet/systemlink-plugins-ni-labs",
   "scripts": {
     "clean": "rm -rf dist submission-manifest.json",
