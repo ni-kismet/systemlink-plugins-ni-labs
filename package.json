@@ -12,6 +12,7 @@
     "submission-manifest": "npm run submission-manifest --workspaces --if-present"
   },
   "devDependencies": {
+    "@ni/nimble-angular": "^33.4.6",
     "deboa": "1.1.2"
   }
 }
