@@ -1,4 +1,4 @@
-import { HttpErrorResponse, HttpResponse } from '@angular/common/http';
+import { HttpErrorResponse, HttpHeaders, HttpResponse } from '@angular/common/http';
 import { firstValueFrom, of, throwError } from 'rxjs';
 import { HealthConfigurationError, SystemLinkService } from './systemlink.service';
 
@@ -90,6 +90,20 @@ describe('SystemLinkService', () => {
 
     expect(health[0].output).toBe(`${'x'.repeat(500)}...`);
     expect(health[0].fullOutput).toBe(response);
+  });
+
+  it('honors HTTP-date Retry-After values', () => {
+    const now = Date.parse('Tue, 25 Aug 2026 15:00:00 GMT');
+    const retryAt = now + 5000;
+    spyOn(Date, 'now').and.returnValue(now);
+    const error = new HttpErrorResponse({
+      status: 429,
+      headers: new HttpHeaders({ 'Retry-After': new Date(retryAt).toUTCString() })
+    });
+
+    const delay = (service as any).getRetryDelayMs(error, 1);
+
+    expect(delay).toBe(retryAt - now);
   });
 
   it('reports a configuration error when the mapping cannot be loaded', async () => {

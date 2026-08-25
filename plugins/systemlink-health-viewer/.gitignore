@@ -15,3 +15,4 @@ temp_main.js
 tmp-compile/
 tmp-tsbuild/
 manifest.json
+sbom/

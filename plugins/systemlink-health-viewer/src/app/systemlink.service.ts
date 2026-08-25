@@ -607,10 +607,15 @@ export class SystemLinkService {
 
   private getRetryDelayMs(error: unknown, attempt: number): number {
     if (error instanceof HttpErrorResponse && error.status === 429) {
-      const retryAfterHeader = error.headers?.get('Retry-After');
+      const retryAfterHeader = error.headers?.get('Retry-After')?.trim();
       const retryAfterSeconds = retryAfterHeader ? Number(retryAfterHeader) : Number.NaN;
-      if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0) {
+      if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds >= 0) {
         return Math.round(retryAfterSeconds * 1000);
+      }
+
+      const retryAfterTimestamp = retryAfterHeader ? Date.parse(retryAfterHeader) : Number.NaN;
+      if (Number.isFinite(retryAfterTimestamp)) {
+        return Math.max(0, retryAfterTimestamp - Date.now());
       }
     }
 

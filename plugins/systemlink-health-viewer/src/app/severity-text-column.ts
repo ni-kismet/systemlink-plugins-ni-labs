@@ -33,9 +33,10 @@ const cellViewStyles = css`
 class SeverityTextCellView extends TableColumnTextCellView {
   protected override updateText(): void {
     super.updateText();
-    const value = this.text;
+    const value = this.text.trim().toUpperCase();
+    const responseCode = Number(value);
     let severity = 'default';
-    if (value === 'LIVE' || value === '200') {
+    if (value === 'LIVE' || (Number.isInteger(responseCode) && responseCode >= 200 && responseCode < 300)) {
       severity = 'success';
     } else if (value === '401' || value === '403') {
       severity = 'muted';
