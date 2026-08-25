@@ -6,7 +6,7 @@
   "section": "Systems Management",
   "maintainer": "Michael Castaneda <mike.castaneda@emerson.com>",
   "homepage": "https://github.com/ni-kismet/systemlink-plugins-ni-labs",
-  "license": "NI-SCL",
+  "license": "MIT",
   "xbPlugin": "webapp",
   "slPluginManagerTags": "ni-labs,webapp,nodes,licensing,systems-management,dashboard",
   "slPluginManagerMinServerVersion": "2024 Q4",

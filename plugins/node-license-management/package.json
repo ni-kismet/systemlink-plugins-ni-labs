@@ -2,7 +2,7 @@
   "name": "@ni-kismet/node-license-management",
   "version": "0.1.0",
   "private": true,
-  "license": "NI-SCL",
+  "license": "MIT",
   "description": "A read-only SystemLink web app that reports managed, unmanaged, inactive, and virtual node counts with a 12-month trend and per-node detail.",
   "scripts": {
     "start": "ng serve --host 0.0.0.0",
