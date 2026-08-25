@@ -1,0 +1,286 @@
+nimble-theme-provider {
+  --page-bg: var(--ni-nimble-application-background-color);
+  --surface: var(--ni-nimble-section-background-color);
+  --surface-muted: var(--ni-nimble-application-background-color);
+  --surface-border: var(--ni-nimble-border-color);
+  --text-strong: var(--ni-nimble-body-font-color);
+  --text-soft: var(--ni-nimble-placeholder-font-color);
+  --row-alt: var(--ni-nimble-application-background-color);
+  --accent: var(--ni-nimble-link-prominent-font-color);
+  --status-pass-color: var(--ni-nimble-pass-color);
+  --status-fail-color: var(--ni-nimble-fail-color);
+  --ok-bg: color-mix(in srgb, var(--ni-nimble-pass-color) 18%, transparent);
+  --ok-text: var(--ni-nimble-pass-color);
+  --bad-bg: color-mix(in srgb, var(--ni-nimble-fail-color) 18%, transparent);
+  --bad-text: var(--ni-nimble-fail-color);
+}
+
+.health-app {
+  min-height: 100vh;
+  max-width: none;
+  margin: 0;
+  --page-pad: 24px;
+  padding: var(--page-pad);
+  display: flex;
+  flex-direction: column;
+  color: var(--text-strong);
+  background: var(--page-bg);
+  font: var(--ni-nimble-body-font);
+}
+
+.app-header {
+  margin-bottom: 18px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.hero {
+  margin: calc(-1 * var(--page-pad)) calc(-1 * var(--page-pad)) 0;
+  padding: var(--page-pad) var(--page-pad) 20px;
+  background: var(--surface);
+  border-bottom: 1px solid transparent;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.app-version {
+  margin: 2px 0 0;
+  color: var(--text-soft);
+  font-size: 0.88rem;
+  font-weight: 400;
+}
+
+.subhead {
+  margin: 4px 0 0;
+  color: var(--text-soft);
+  font-size: 0.94rem;
+}
+
+.summary-grid {
+  margin-bottom: 0;
+}
+
+.summary-panel-shell {
+  position: relative;
+  padding-bottom: 22px;
+}
+
+.summary-loading-status {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-soft);
+  font-size: 0.78rem;
+}
+
+.summary-loading-status nimble-spinner {
+  width: 14px;
+  height: 14px;
+}
+
+.summary-panel-tile-static {
+  pointer-events: none;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin: 0 calc(-1 * var(--page-pad)) 0;
+  padding: 12px var(--page-pad);
+  border-top: 0;
+  border-bottom: 1px solid transparent;
+  border-radius: 0;
+  background: var(--page-bg);
+  box-shadow: none;
+}
+
+.toolbar + .table-card {
+  border-top: 0;
+}
+
+.search-input {
+  flex: 0 1 320px;
+  min-width: 220px;
+  margin-left: auto;
+}
+
+.refresh-button nimble-icon-arrow-rotate-right {
+  width: 14px;
+  height: 14px;
+}
+
+.busy-spinner {
+  width: 16px;
+  height: 16px;
+}
+
+.last-updated {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-soft);
+}
+
+.page-footer-meta {
+  margin-top: auto;
+  padding-top: 16px;
+}
+
+.error-banner {
+  margin-bottom: 8px;
+}
+
+.table-card {
+  background: transparent;
+  margin-inline: calc(-1 * var(--page-pad));
+}
+
+.table-loading {
+  min-height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-soft);
+  font-size: 0.9rem;
+}
+
+.health-table {
+  width: 100%;
+  height: var(--ni-nimble-table-fit-rows-height);
+  max-height: none;
+  --ni-nimble-application-background-color: var(--page-bg);
+}
+
+.empty-state,
+.empty-state {
+  margin: 10px 0 0;
+  color: var(--text-soft);
+  font-size: 0.86rem;
+}
+
+@media (max-width: 640px) {
+  .health-app {
+    --page-pad: 16px;
+  }
+
+  .search-input {
+    width: 100%;
+    min-width: 0;
+    flex: 1 1 100%;
+  }
+
+  .toolbar {
+    padding: 12px;
+  }
+}
+
+.output-dialog {
+  --ni-nimble-dialog-small-width: min(920px, 92vw);
+}
+
+.output-dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+}
+
+.output-modal-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: var(--text-soft);
+  font-size: 0.82rem;
+}
+
+.output-modal-section {
+  margin-top: 12px;
+}
+
+.output-modal-section h3 {
+  margin: 0 0 8px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.output-modal-content {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-x: hidden;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  border: 1px solid var(--surface-border);
+  border-radius: 4px;
+  background: var(--surface-muted);
+  padding: 10px;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  min-height: 160px;
+}
+
+.output-modal-buffer {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-x: hidden;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  border: 1px solid var(--surface-border);
+  border-radius: 4px;
+  background: var(--surface-muted);
+  padding: 10px;
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+@media (max-width: 620px) {
+  .health-app {
+    --page-pad: 12px;
+  }
+
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .toolbar {
+    padding: 8px;
+  }
+
+  .nimble-action {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .search-input {
+    min-width: 0;
+  }
+
+  .refresh-icon-button {
+    width: 100%;
+  }
+
+  .health-table {
+    display: block;
+    overflow-x: auto;
+  }
+
+  .output-modal {
+    max-height: 86vh;
+    padding: 10px;
+  }
+}

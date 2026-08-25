@@ -1,0 +1,28 @@
+@use '@ni/nimble-angular/styles/fonts' as *;
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+
+body {
+  font: var(--ni-nimble-body-font);
+}
+
+nimble-theme-provider {
+  display: block;
+  min-height: 100vh;
+  background: var(--ni-nimble-application-background-color);
+  color: var(--ni-nimble-body-font-color);
+}
+
+app-root {
+  display: block;
+  width: 100%;
+}

@@ -62,6 +62,10 @@ jobs:
         working-directory: ${{ matrix.path }}
         run: npm run build
 
+      - name: Test plugin
+        working-directory: ${{ matrix.path }}
+        run: npm run test --if-present -- --watch=false
+
       - name: Package plugin
         working-directory: ${{ matrix.path }}
         run: npm run package

@@ -1,0 +1,162 @@
+<nimble-theme-provider [theme]="theme">
+<main class="health-app" [class.dark]="theme === 'dark'" [class.light]="theme === 'light'">
+  <div class="hero">
+  <header class="app-header">
+    <h1>{{ title }}</h1>
+    <p class="app-version" *ngIf="appDisplayVersion">Version {{ appDisplayVersion }}</p>
+    <p class="subhead">Monitor service availability, response times, and access across your SystemLink environment.</p>
+  </header>
+
+  <section class="summary-grid" aria-label="Service summary" [attr.aria-busy]="loading">
+    <div class="summary-panel-shell">
+      <ok-fv-summary-panel (click)="onSummaryPanelClick($event)">
+        <ok-fv-summary-panel-tile
+          data-filter="all"
+          label="Total Tests"
+          count="{{ loading && !hasHealthData ? '...' : totalServices }}"
+          text-position="under"
+          [selected]="statusFilter === 'all'"
+        ></ok-fv-summary-panel-tile>
+        <ok-fv-summary-panel-tile
+          data-filter="functional"
+          label="Functional"
+          count="{{ loading && !hasHealthData ? '...' : functionalCount }}"
+          text-position="under"
+          [selected]="statusFilter === 'functional'"
+        ></ok-fv-summary-panel-tile>
+        <ok-fv-summary-panel-tile
+          data-filter="failed"
+          label="Failed"
+          count="{{ loading && !hasHealthData ? '...' : failedCount }}"
+          text-position="under"
+          [selected]="statusFilter === 'failed'"
+        ></ok-fv-summary-panel-tile>
+        <ok-fv-summary-panel-tile
+          data-filter="unauthorized"
+          label="Unauthorized"
+          count="{{ loading && !hasHealthData ? '...' : unauthorizedCount }}"
+          text-position="under"
+          [selected]="statusFilter === 'unauthorized'"
+        ></ok-fv-summary-panel-tile>
+        <ok-fv-summary-panel-tile
+          class="summary-panel-tile-static"
+          label="Health"
+          [count]="loading && !hasHealthData ? '...' : availabilityPercent + '%'"
+          text-position="under"
+        ></ok-fv-summary-panel-tile>
+        <ok-fv-summary-panel-tile
+          class="summary-panel-tile-static"
+          label="Avg Latency"
+          [count]="loading && !hasHealthData ? '...' : (averageLatencyMs !== null ? averageLatencyMs + ' ms' : 'N/A')"
+          text-position="under"
+        ></ok-fv-summary-panel-tile>
+      </ok-fv-summary-panel>
+      <div *ngIf="loading" class="summary-loading-status" role="status">
+        <nimble-spinner aria-hidden="true"></nimble-spinner>
+        <span>Updating summary</span>
+      </div>
+    </div>
+  </section>
+  </div>
+
+  <section class="toolbar">
+      <nimble-text-field
+        class="search-input"
+        placeholder="Search services, endpoints, or output"
+        title="Search"
+        [ngModel]="searchTerm"
+        (ngModelChange)="onSearchTermChange($event)"
+      >
+        <nimble-icon-magnifying-glass slot="start"></nimble-icon-magnifying-glass>
+      </nimble-text-field>
+
+      <nimble-button
+        appearance="ghost"
+        content-hidden
+        class="refresh-button"
+        (click)="refresh()"
+        [disabled]="loading"
+        [title]="loading ? 'Refreshing' : 'Refresh service health'"
+      >
+        <nimble-icon-arrow-rotate-right slot="start"></nimble-icon-arrow-rotate-right>
+        Refresh service health
+      </nimble-button>
+  </section>
+
+  <nimble-banner *ngIf="error" open severity="error" class="error-banner">
+    <span slot="title">{{ errorTitle }}</span>
+    {{ error }}
+  </nimble-banner>
+
+  <section class="table-card" *ngIf="loading">
+      <div class="table-loading" role="status" aria-live="polite">
+        <nimble-spinner class="busy-spinner" aria-hidden="true"></nimble-spinner>
+        <span>Refreshing...</span>
+      </div>
+  </section>
+
+  <section class="table-card" *ngIf="!loading && tableRows.length > 0; else emptyState">
+      <nimble-table
+        #healthTable
+        class="health-table"
+        id-field-name="id"
+        selection-mode="single"
+        (selection-change)="onRowSelectionChange($event)"
+      >
+        <nimble-table-column-mapping
+          field-name="statusKey"
+          key-type="string"
+          fractional-width="0"
+          min-pixel-width="80"
+        >
+          Status
+          <nimble-mapping-icon key="functional" icon="nimble-icon-check" severity="success" text="Functional" text-hidden></nimble-mapping-icon>
+          <nimble-mapping-icon key="failed" icon="nimble-icon-xmark" severity="error" text="Failed" text-hidden></nimble-mapping-icon>
+          <nimble-mapping-icon key="unauthorized" icon="nimble-icon-lock" text="Unauthorized" text-hidden></nimble-mapping-icon>
+        </nimble-table-column-mapping>
+
+        <nimble-table-column-text field-name="serviceDisplay" sort-index="0" sort-direction="ascending" fractional-width="2" min-pixel-width="160">Service</nimble-table-column-text>
+        <nimble-table-column-text field-name="service" fractional-width="2" min-pixel-width="150">Test</nimble-table-column-text>
+        <nimble-table-column-text field-name="commandDisplay" fractional-width="1" min-pixel-width="84">Command</nimble-table-column-text>
+        <app-link-text-column field-name="endpoint" fractional-width="2">Endpoint</app-link-text-column>
+        <app-severity-text-column field-name="registryStateDisplay" fractional-width="1">Registry State</app-severity-text-column>
+        <nimble-table-column-text field-name="latencyDisplay" sort-by-field-name="latencyMs" grouping-disabled fractional-width="1" min-pixel-width="92"><span title="Latency is measured from this browser and includes the network round-trip to the SystemLink service. It reflects this client's connection, not server-side processing time alone.">Latency</span></nimble-table-column-text>
+        <app-severity-text-column field-name="responseDisplay" sort-by-field-name="responseCode" grouping-disabled fractional-width="1">Response Code</app-severity-text-column>
+      </nimble-table>
+  </section>
+
+  <ng-template #emptyState>
+    <p class="empty-state" *ngIf="!loading">
+      Click refresh to check all configured SystemLink service endpoints.
+    </p>
+  </ng-template>
+
+  <p class="last-updated page-footer-meta" *ngIf="lastUpdated">
+    Last updated: {{ lastUpdated | date: 'mediumTime' }}
+  </p>
+
+  <nimble-dialog #outputDialog aria-label="Endpoint output details" class="output-dialog">
+    <span slot="title">{{ getSelectedOutputTestName() }}</span>
+    <span slot="subtitle">{{ selectedOutput?.endpoint }}</span>
+
+    <div class="output-dialog-body" *ngIf="selectedOutput">
+      <div class="output-modal-meta">
+        <span>Latency: {{ selectedOutput.latencyMs !== null ? (selectedOutput.latencyMs + ' ms') : 'N/A' }}</span>
+        <span>Response: {{ selectedOutput.responseCode ?? 'N/A' }}</span>
+      </div>
+
+      <div *ngIf="selectedOutput.method === 'POST' && selectedOutput.body" class="output-modal-section">
+        <h3>Request Buffer</h3>
+        <pre class="output-modal-buffer">{{ selectedOutput.body | json }}</pre>
+      </div>
+
+      <div class="output-modal-section">
+        <h3>Response Output</h3>
+        <pre class="output-modal-content">{{ selectedOutput.fullOutput }}</pre>
+      </div>
+    </div>
+
+    <nimble-button slot="footer" appearance="outline" (click)="closeOutputModal()">Close</nimble-button>
+  </nimble-dialog>
+</main>
+</nimble-theme-provider>

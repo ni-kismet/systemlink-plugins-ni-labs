@@ -1,0 +1,460 @@
+﻿{
+    "tests":  [
+                  {
+                      "serviceName":  "Security",
+                      "testName":  "Get Policies",
+                      "command":  "GET",
+                      "buffer":  null,
+                      "endpoint":  "/niauth/v1/policies?take=1",
+                      "enabled":  true, 
+                      "requireRegistry": false,
+                      "entitlements":  [
+                          "SystemLink_Edition_Base","SystemLink_Edition_Full","SystemLink_Edition_Pro","SystemLink_Edition_Enterprise"
+                      ]
+                  },
+                  {
+                      "serviceName":  "Comments",
+                      "testName":  "Comments Info",
+                      "command":  "GET",
+                      "buffer":  null,
+                      "endpoint":  "/nicomments/v1",
+                      "enabled":  true, 
+                      "requireRegistry": false,
+                      "entitlements":  [
+                          "SystemLink_Edition_Base","SystemLink_Edition_Full","SystemLink_Edition_Pro","SystemLink_Edition_Enterprise"
+                      ]
+                  },
+                  {
+                      "serviceName":  "DataFrame",
+                      "testName":  "Get Tables",
+                      "command":  "GET",
+                      "buffer":  null,
+                      "endpoint":  "/nidataframe/v1/tables?take=1",
+                      "enabled":  true, 
+                      "requireRegistry": false,
+                      "entitlements":  [
+                          "SystemLink_Edition_Enterprise"
+                      ]
+                  },
+                  {
+                      "serviceName":  "DashboardHost",
+                      "testName":  "Dashboard Service Health",
+                      "command":  "GET",
+                      "buffer":  null,
+                      "endpoint":  "/dashboardhost/api/health",
+                      "enabled":  true, 
+                      "requireRegistry": false,
+                      "entitlements":  [
+                          "SystemLink_Edition_Base","SystemLink_Edition_Full","SystemLink_Edition_Pro","SystemLink_Edition_Enterprise"
+                      ]
+                  },
+                  {
+                      "serviceName":  "DynamicFormFields",
+                      "testName":  "Get Dynamic Form Fields",
+                      "command":  "GET",
+                      "buffer":  null,
+                      "endpoint":  "/nidynamicformfields/v1/configurations?Take=1",
+                      "enabled":  true,
+                      "requireRegistry": false,
+                      "entitlements":  [
+                          "SystemLink_Edition_Base","SystemLink_Edition_Full","SystemLink_Edition_Pro","SystemLink_Edition_Enterprise"
+                      ]
+                  },
+                  {
+                      "serviceName":  "JupyterHub",
+                      "testName":  "JupyterHub Health",
+                      "command":  "GET",
+                      "buffer":  null,
+                      "endpoint":  "/jupyterhub/hub/health",
+                      "enabled":  true, 
+                      "requireRegistry": false,
+                      "entitlements":  [
+                          "SystemLink_Edition_Base","SystemLink_Edition_Full","SystemLink_Edition_Pro","SystemLink_Edition_Enterprise"
+                      ]
+                  },
+                  {
+                      "serviceName":  "Notebook",
+                      "testName":  "Query Notebooks",
+                      "command":  "POST",
+                      "buffer":  "{ take: 1 }",
+                      "endpoint":  "/ninotebook/v1/notebook/query",
+                      "enabled":  true, 
+                      "requireRegistry": false,
+                      "entitlements":  [
+                          "SystemLink_Edition_Base","SystemLink_Edition_Full","SystemLink_Edition_Pro","SystemLink_Edition_Enterprise"
+                      ]
+                  },
+                  {
+                      "serviceName":  "Notification",
+                      "testName":  "Notification Info",
+                      "command":  "GET",
+                      "buffer":  null,
+                      "endpoint":  "/ninotification/v1",
+                      "enabled":  true, 
+                      "requireRegistry": false,
+                      "entitlements":  [
+                          "SystemLink_Edition_Base","SystemLink_Edition_Full","SystemLink_Edition_Pro","SystemLink_Edition_Enterprise"
+                      ]
+                  },
+                  {
+                      "serviceName":  "Repository",
+                      "testName":  "Repository Info",
+                      "command":  "GET",
+                      "buffer":  null,
+                      "endpoint":  "/nirepo/v1",
+                      "enabled":  true, 
+                      "requireRegistry": false,
+                      "entitlements":  [
+                          "SystemLink_Edition_Base","SystemLink_Edition_Full","SystemLink_Edition_Pro","SystemLink_Edition_Enterprise"
+                      ]
+                  },
+                  {
+                      "serviceName":  "RoutineExecutor",
+                      "testName":  "Routine Executor Info",
+                      "command":  "GET",
+                      "buffer":  null,
+                      "endpoint":  "/niroutineexecutor/v1",
+                      "enabled":  true, 
+                      "requireRegistry": false,
+                      "entitlements":  [
+                          "SystemLink_Edition_Base","SystemLink_Edition_Full","SystemLink_Edition_Pro","SystemLink_Edition_Enterprise"
+                      ]
+                  },
+                  {
+                      "serviceName":  "Routines",
+                      "testName":  "Get Routines V1",
+                      "command":  "GET",
+                      "buffer":  null,
+                      "endpoint":  "/niroutine/v1/routines",
+                      "enabled":  true, 
+                      "requireRegistry": false,
+                      "entitlements":  [
+                          "SystemLink_Edition_Base","SystemLink_Edition_Full","SystemLink_Edition_Pro","SystemLink_Edition_Enterprise"
+                      ]
+                  },
+                  {
+                      "serviceName":  "Routines",
+                      "testName":  "Get Routines V2",
+                      "command":  "GET",
+                      "buffer":  null,
+                      "endpoint":  "/niroutine/v2/routines",
+                      "enabled":  true, 
+                      "requireRegistry": false,
+                      "entitlements":  [
+                          "SystemLink_Edition_Base","SystemLink_Edition_Full","SystemLink_Edition_Pro","SystemLink_Edition_Enterprise"
+                      ]
+                  },
+                  {
+                      "serviceName":  "TagHistorian",
+                      "testName":  "Query Tag History",
+                      "command":  "POST",
+                      "buffer":  "{ path: \u0027*\u0027, take: 1 }",
+                      "endpoint":  "/nitaghistorian/v2/tags/query-history",
+                      "enabled":  true, 
+                      "requireRegistry": false,
+                      "entitlements":  [
+                          "SystemLink_Edition_Base","SystemLink_Edition_Full","SystemLink_Edition_Pro","SystemLink_Edition_Enterprise"
+                      ]
+                  },
+                  {
+                      "serviceName":  "UserData",
+                      "testName":  "Get User Data",
+                      "command":  "GET",
+                      "buffer":  null,
+                      "endpoint":  "/niuserdata/v1/items?Skip=0\u0026Take=1",
+                      "enabled":  true, 
+                      "requireRegistry": false,
+                      "entitlements":  [
+                          "SystemLink_Edition_Base","SystemLink_Edition_Full","SystemLink_Edition_Pro","SystemLink_Edition_Enterprise"
+                      ]
+                  },
+                  {
+                      "serviceName":  "SystemsState",
+                      "testName":  "Get States",
+                      "command":  "GET",
+                      "buffer":  null,
+                      "endpoint":  "/nisystemsstate/v1/states?Skip=0\u0026Take=1",
+                      "enabled":  true, 
+                      "requireRegistry": false,
+                      "entitlements":  [
+                          "SystemLink_Edition_Base","SystemLink_Edition_Full","SystemLink_Edition_Pro","SystemLink_Edition_Enterprise"
+                      ]
+                  },
+                  {
+                      "serviceName":  "Locations",
+                      "testName":  "Get Locations",
+                      "command":  "GET",
+                      "buffer":  null,
+                      "endpoint":  "/nilocation/v1/locations?take=1",
+                      "enabled":  true, 
+                      "requireRegistry": false,
+                      "entitlements":  [
+                          "SystemLink_Edition_Full","SystemLink_Edition_Pro","SystemLink_Edition_Enterprise"
+                      ]
+                  },
+                  {
+                      "serviceName":  "Security",
+                      "testName":  "Get Workspaces",
+                      "command":  "GET",
+                      "buffer":  null,
+                      "endpoint":  "/niuser/v1/workspaces?take=1",
+                      "enabled":  true, 
+                      "requireRegistry": false,
+                      "entitlements":  [
+                          "SystemLink_Edition_Base","SystemLink_Edition_Full","SystemLink_Edition_Pro","SystemLink_Edition_Enterprise"
+                      ]
+                  },
+                  {
+                      "serviceName":  "Tags",
+                      "testName":  "Get Tags",
+                      "command":  "GET",
+                      "buffer":  null,
+                      "endpoint":  "/nitag/v2/tags?take=1",
+                      "enabled":  true, 
+                      "requireRegistry": false,
+                      "entitlements":  [
+                          "SystemLink_Edition_Base","SystemLink_Edition_Full","SystemLink_Edition_Pro","SystemLink_Edition_Enterprise"
+                      ]
+                  },
+                  {
+                      "serviceName":  "Tags",
+                      "testName":  "Get Tag Subscriptions",
+                      "command":  "GET",
+                      "buffer":  null,
+                      "endpoint":  "/nitag/v2/subscriptions?take=1",
+                      "enabled":  true, 
+                      "requireRegistry": false,
+                      "entitlements":  [
+                          "SystemLink_Edition_Base","SystemLink_Edition_Full","SystemLink_Edition_Pro","SystemLink_Edition_Enterprise"
+                      ]
+                  },
+                  {
+                      "serviceName":  "TestMonitor",
+                      "testName":  "Get Results",
+                      "command":  "GET",
+                      "buffer":  null,
+                      "endpoint":  "/nitestmonitor/v2/results?take=1",
+                      "enabled":  true, 
+                      "requireRegistry": false,
+                      "entitlements":  [
+                          "SystemLink_Edition_Base","SystemLink_Edition_Full","SystemLink_Edition_Pro","SystemLink_Edition_Enterprise"
+                      ]    
+                  },
+                  {
+                      "serviceName":  "TestMonitor",
+                      "testName":  "Get Steps",
+                      "command":  "GET",
+                      "buffer":  null,
+                      "endpoint":  "/nitestmonitor/v2/steps?take=1",
+                      "enabled":  true, 
+                      "requireRegistry": false,
+                      "entitlements":  [
+                          "SystemLink_Edition_Base","SystemLink_Edition_Full","SystemLink_Edition_Pro","SystemLink_Edition_Enterprise"
+                      ]
+                  },
+                  {
+                      "serviceName":  "TestMonitor",
+                      "testName":  "Get Products",
+                      "command":  "GET",
+                      "buffer":  null,
+                      "endpoint":  "/nitestmonitor/v2/products?take=1",
+                      "enabled":  true, 
+                      "requireRegistry": false,
+                      "entitlements":  [
+                          "SystemLink_Edition_Base","SystemLink_Edition_Full","SystemLink_Edition_Pro","SystemLink_Edition_Enterprise"
+                      ]
+                  },
+                  {
+                      "serviceName":  "AssetPerformanceManagement",
+                      "testName":  "Get Assets",
+                      "command":  "GET",
+                      "buffer":  null,
+                      "endpoint":  "/niapm/v1/assets?take=1",
+                      "enabled":  true, 
+                      "requireRegistry": false,
+                      "entitlements":  [
+                          "SystemLink_Edition_Base","SystemLink_Edition_Full","SystemLink_Edition_Pro","SystemLink_Edition_Enterprise"
+                      ]
+                  },
+				  {
+                      "serviceName":  "AssetPerformanceManagement",
+                      "testName":  "Elastic Asset Search",
+                      "command":  "POST",
+                      "buffer":  "{ take: 1 }",
+                      "endpoint": "/niapm/v1/materialized/search-assets",
+                      "enabled":  true, 
+                      "requireRegistry": false,
+                      "entitlements":  [
+                          "SystemLink_Edition_Base","SystemLink_Edition_Full","SystemLink_Edition_Pro","SystemLink_Edition_Enterprise"
+                      ]
+                  },
+                  {
+                      "serviceName":  "SystemsManagement",
+                      "testName":  "Query Systems",
+                      "command":  "POST",
+                      "buffer":  "{ take: 1 }",
+                      "endpoint":  "/nisysmgmt/v1/query-systems",
+                      "enabled":  true, 
+                      "requireRegistry": false,
+                      "entitlements":  [
+                          "SystemLink_Edition_Base","SystemLink_Edition_Full","SystemLink_Edition_Pro","SystemLink_Edition_Enterprise"
+                      ]
+                  },
+				  {
+                      "serviceName":  "SystemsManagement",
+                      "testName":  "Elastic System Search",
+                      "command":  "POST",
+                      "buffer":  "{ take: 1 }",
+                      "endpoint": "/nisysmgmt/v1/materialized/search-systems",
+                      "enabled":  true, 
+                      "requireRegistry": false,
+                      "entitlements":  [
+                          "SystemLink_Edition_Base","SystemLink_Edition_Full","SystemLink_Edition_Pro","SystemLink_Edition_Enterprise"
+                      ]
+                  },
+                  {
+                      "serviceName":  "FileIngestion",
+                      "testName":  "Get Files",
+                      "command":  "GET",
+                      "buffer":  null,
+                      "endpoint":  "/nifile/v1/service-groups/Default/files?take=1",
+                      "enabled":  true, 
+                      "requireRegistry": false,
+                      "entitlements":  [
+                          "SystemLink_Edition_Base","SystemLink_Edition_Full","SystemLink_Edition_Pro","SystemLink_Edition_Enterprise"
+                      ]
+                  },
+                  {
+                      "serviceName":  "FileIngestion",
+                      "testName":  "Elastic File Search",
+                      "command":  "POST",
+                      "buffer":  "{ take: 1 }",
+                      "endpoint":  "/nifile/v1/service-groups/Default/search-files",
+                      "enabled":  true, 
+                      "requireRegistry": false,
+                      "entitlements":  [
+                          "SystemLink_Edition_Base","SystemLink_Edition_Full","SystemLink_Edition_Pro","SystemLink_Edition_Enterprise"
+                      ]
+                  },
+                  {
+                      "serviceName":  "NotebookExecution",
+                      "testName":  "Query Executions",
+                      "command":  "POST",
+                      "buffer":  "{ take: 1 }",
+                      "endpoint":  "/ninbexecution/v1/query-executions",
+                      "enabled":  true, 
+                      "requireRegistry": false,
+                      "entitlements":  [
+                          "SystemLink_Edition_Base","SystemLink_Edition_Full","SystemLink_Edition_Pro","SystemLink_Edition_Enterprise"
+                      ]
+                  },
+                  {
+                      "serviceName":  "Feeds",
+                      "testName":  "Get Feeds",
+                      "command":  "GET",
+                      "buffer":  null,
+                      "endpoint":  "/nifeed/v1/feeds?take=1",
+                      "enabled":  true, 
+                      "requireRegistry": false,
+                      "entitlements":  [
+                          "SystemLink_Edition_Base","SystemLink_Edition_Full","SystemLink_Edition_Pro","SystemLink_Edition_Enterprise"
+                      ]
+                  },
+                  {
+                      "serviceName":  "WorkItem",
+                      "testName":  "Query Work Items",
+                      "command":  "POST",
+                      "buffer":  "{ take: 1 }",
+                      "endpoint":  "/niworkitem/v1/query-workitems",
+                      "enabled":  true, 
+                      "requireRegistry": true,
+                      "entitlements":  [
+                          "SystemLink_Edition_Full","SystemLink_Edition_Pro","SystemLink_Edition_Enterprise"
+                      ]
+                  },
+                  {
+                      "serviceName":  "WorkItem",
+                      "testName":  "Query Work Item Templates",
+                      "command":  "POST",
+                      "buffer":  "{ take: 1 }",
+                      "endpoint":  "/niworkitem/v1/query-workitem-templates",
+                      "enabled":  true, 
+                      "requireRegistry": true,
+                      "entitlements":  [
+                          "SystemLink_Edition_Full","SystemLink_Edition_Pro","SystemLink_Edition_Enterprise"
+                      ]
+                  },
+                  {
+                      "serviceName":  "AlarmService",
+                      "testName":  "Query Alarms",
+                      "command":  "POST",
+                      "buffer":  "{ instanceFilter: {}, take: 1 }",
+                      "endpoint":  "/nialarm/v1/query-instances-with-filter",
+                      "enabled":  true, 
+                      "requireRegistry": false,
+                      "entitlements":  [
+                          "SystemLink_Edition_Base","SystemLink_Edition_Full","SystemLink_Edition_Pro","SystemLink_Edition_Enterprise"
+                      ]
+                  },
+                  {
+                      "serviceName":  "WebAppServices",
+                      "testName":  "Query Web Apps",
+                      "command":  "POST",
+                      "buffer":  "{ take: 1 }",
+                      "endpoint":  "/niapp/v1/webapps/query",
+                      "enabled":  true, 
+                      "requireRegistry": false,
+                      "entitlements":  [
+                          "SystemLink_Edition_Base","SystemLink_Edition_Full","SystemLink_Edition_Pro","SystemLink_Edition_Enterprise"
+                      ]
+                  },
+                  {
+                      "serviceName":  "Specification",
+                      "testName":  "Specification Info",
+                      "command":  "GET",
+                      "buffer":  null,
+                      "endpoint":  "/nispec/v1",
+                      "enabled":  true, 
+                      "requireRegistry": true,
+                      "entitlements":  [
+                          "SystemLink_Edition_Full","SystemLink_Edition_Pro","SystemLink_Edition_Enterprise"
+                      ]
+                  },
+                  {
+                      "serviceName":  "AIAssistant",
+                      "testName":  "AIAssistant Info",
+                      "command":  "GET",
+                      "buffer":  null,
+                      "endpoint":  "/niaiassistant/v1",
+                      "enabled":  true, 
+                      "requireRegistry": true,
+                      "entitlements":  [
+                          "SystemLink_Edition_Base","SystemLink_Edition_Full","SystemLink_Edition_Pro","SystemLink_Edition_Enterprise"
+                      ]
+                  },
+                  {
+                      "serviceName":  "NILicense",
+                      "testName":  "NILicense Info",
+                      "command":  "GET",
+                      "buffer":  null,
+                      "endpoint":  "/nilicense/v1",
+                      "enabled":  true, 
+                      "requireRegistry": false,
+                      "entitlements":  [
+                          "SystemLink_Edition_Base","SystemLink_Edition_Full","SystemLink_Edition_Pro"
+                      ]
+                  },
+                  {
+                      "serviceName":  "TDMReader",
+                      "testName":  "TDMReader Info",
+                      "command":  "GET",
+                      "buffer":  null,
+                      "endpoint":  "/nitdmreader/v2",
+                      "enabled":  true, 
+                      "requireRegistry": false,
+                      "entitlements":  [
+                          "SystemLink_Edition_Base","SystemLink_Edition_Full","SystemLink_Edition_Pro"
+                      ]
+                  }
+              ]
+}
