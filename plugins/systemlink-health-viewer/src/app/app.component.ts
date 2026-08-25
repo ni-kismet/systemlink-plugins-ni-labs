@@ -1,11 +1,11 @@
 import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
+import { Observable, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
-import { EndpointHealth, SystemLinkService } from './systemlink.service';
+import { EndpointHealth, HealthConfigurationError, SystemLinkService } from './systemlink.service';
 import { AppModule } from './app.module';
 
-type StatusFilter = 'all' | 'functional' | 'failed';
+type StatusFilter = 'all' | 'functional' | 'failed' | 'unauthorized';
 
 interface HealthRow {
   id: string;
@@ -61,6 +61,7 @@ export class AppComponent implements OnInit, OnDestroy {
   tableRows: HealthRow[] = [];
   loading = false;
   error: string | null = null;
+  errorTitle = 'Connection error';
   searchTerm = '';
   statusFilter: StatusFilter = 'all';
   lastUpdated: Date | null = null;
@@ -95,7 +96,10 @@ export class AppComponent implements OnInit, OnDestroy {
         this.appDisplayVersion = null;
       }
     });
-    this.loadTestMappings().subscribe(() => this.refresh());
+    this.loadTestMappings().subscribe({
+      next: () => this.refresh(),
+      error: error => this.showError(error)
+    });
   }
 
   ngOnDestroy(): void {
@@ -109,8 +113,6 @@ export class AppComponent implements OnInit, OnDestroy {
   refresh(): void {
     this.loading = true;
     this.error = null;
-    this.endpointHealth = [];
-    this.filteredHealth = [];
 
     this.systemLink.getServiceHealth().subscribe({
       next: data => {
@@ -120,8 +122,7 @@ export class AppComponent implements OnInit, OnDestroy {
         this.loading = false;
       },
       error: err => {
-        console.error(err);
-        this.error = 'Unable to connect to SystemLink API. Please check the API URL and credentials.';
+        this.showError(err);
         this.loading = false;
       }
     });
@@ -131,12 +132,20 @@ export class AppComponent implements OnInit, OnDestroy {
     return this.getVisibleEndpointHealth().length;
   }
 
+  get hasHealthData(): boolean {
+    return this.endpointHealth.length > 0;
+  }
+
   get functionalCount(): number {
     return this.getCountableEndpointHealth().filter(item => item.functional).length;
   }
 
   get failedCount(): number {
     return this.getCountableEndpointHealth().filter(item => !item.functional).length;
+  }
+
+  get unauthorizedCount(): number {
+    return this.getVisibleEndpointHealth().filter(item => item.authRestricted).length;
   }
 
   get availabilityPercent(): number {
@@ -203,6 +212,17 @@ export class AppComponent implements OnInit, OnDestroy {
     this.applyFilters();
   }
 
+  onSummaryPanelClick(event: Event): void {
+    const tile = event.composedPath().find(
+      (item): item is HTMLElement =>
+        item instanceof HTMLElement && item.localName === 'ok-fv-summary-panel-tile'
+    );
+    const filter = tile?.dataset['filter'];
+    if (filter === 'all' || filter === 'functional' || filter === 'failed' || filter === 'unauthorized') {
+      this.onStatusSummaryClick(filter);
+    }
+  }
+
   private initializeTheme(): void {
     const urlTheme = this.getThemeFromUrl();
     const storedTheme = this.getStoredTheme();
@@ -256,7 +276,8 @@ export class AppComponent implements OnInit, OnDestroy {
       const statusMatch =
         this.statusFilter === 'all' ||
         (this.statusFilter === 'functional' && item.functional && !item.authRestricted) ||
-        (this.statusFilter === 'failed' && !item.functional && !item.authRestricted);
+        (this.statusFilter === 'failed' && !item.functional && !item.authRestricted) ||
+        (this.statusFilter === 'unauthorized' && item.authRestricted);
 
       if (!statusMatch) {
         return false;
@@ -341,8 +362,12 @@ export class AppComponent implements OnInit, OnDestroy {
   private loadTestMappings(): Observable<void> {
     return this.http.get<TestMappingDocument>('assets/test-mapping.json').pipe(
       map(document => {
+        if (!document || !Array.isArray(document.tests)) {
+          throw new HealthConfigurationError();
+        }
+
         this.testMappingByKey.clear();
-        for (const test of document.tests ?? []) {
+        for (const test of document.tests) {
           if (!test?.command || !test?.endpoint || test.enabled === false) {
             continue;
           }
@@ -352,9 +377,21 @@ export class AppComponent implements OnInit, OnDestroy {
       }),
       catchError(() => {
         this.testMappingByKey.clear();
-        return of(void 0);
+        return throwError(() => new HealthConfigurationError());
       })
     );
+  }
+
+  private showError(error: unknown): void {
+    console.error(error);
+    if (error instanceof HealthConfigurationError) {
+      this.errorTitle = 'Configuration error';
+      this.error = error.message;
+      return;
+    }
+
+    this.errorTitle = 'Connection error';
+    this.error = 'Unable to connect to SystemLink API. Please check the API URL and credentials.';
   }
 
   private getMappedServiceName(item: EndpointHealth): string {

@@ -42,7 +42,7 @@ module.exports = function (config) {
       }
     },
     browsers: ['ChromeHeadlessCI'],
-    singleRun: false,
-    restartOnFileChange: true
+    singleRun: true,
+    restartOnFileChange: false
   });
 };

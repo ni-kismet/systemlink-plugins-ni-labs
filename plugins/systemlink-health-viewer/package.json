@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "start": "ng serve --open",
-    "build": "ng build --configuration production && node ./scripts/fix-csp-index.js",
+    "build": "ng build --configuration production",
     "postbuild": "npm run sbom",
     "sbom": "node -e \"require('fs').mkdirSync('sbom',{recursive:true})\" && npm sbom --sbom-format cyclonedx --sbom-type application > sbom/SystemLink-Health-Viewer.cyclonedx.json && npm sbom --sbom-format spdx --sbom-type application > sbom/SystemLink-Health-Viewer.spdx.json",
     "clean": "rm -rf dist submission-manifest.json",
@@ -26,7 +26,6 @@
     "@ni/nimble-components": "^35.12.5",
     "@ni/ok-angular": "^2.5.2",
     "@ni/spright-angular": "^9.5.7",
-    "@ni/systemlink-clients-ts": "3.0.2",
     "@ni/unit-format": "^1.0.5",
     "rxjs": "^7.8.0",
     "tslib": "^2.6.0",

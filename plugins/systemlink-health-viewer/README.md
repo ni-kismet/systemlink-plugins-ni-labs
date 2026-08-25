@@ -8,8 +8,8 @@ Nimble components.
 
 - **Service summary cards** — total, functional, and failed services, overall
   availability, and average latency at a glance
-- **Per-endpoint health checks** — reports response code, latency, and a trimmed
-  response payload for each configured service
+- **Per-endpoint health checks** — reports response code, latency, and a compact
+  response preview for each configured service, with full output in the details modal
 - **Configurable probes** — the set of endpoints to check is driven by a
   `test-mapping.json` asset, so services can be added or disabled without code changes
 - **Service registry awareness** — cross-references the SystemLink service registry

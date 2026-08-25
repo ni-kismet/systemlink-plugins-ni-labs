@@ -4,30 +4,58 @@
   <header class="app-header">
     <h1>{{ title }}</h1>
     <p class="app-version" *ngIf="appDisplayVersion">Version {{ appDisplayVersion }}</p>
-    <p class="subhead">Comprehensive Health Visibility for Your SystemLink Environment</p>
+    <p class="subhead">Monitor service availability, response times, and access across your SystemLink environment.</p>
   </header>
 
-  <section class="summary-grid" aria-label="Service summary">
-    <nimble-card-button class="summary-card" [selected]="statusFilter === 'all'" (click)="onStatusSummaryClick('all')">
-      <span class="summary-label">Total Tests</span>
-      <span class="summary-value">{{ loading ? '' : totalServices }}</span>
-    </nimble-card-button>
-    <nimble-card-button class="summary-card" [selected]="statusFilter === 'functional'" (click)="onStatusSummaryClick('functional')">
-      <span class="summary-label">Functional</span>
-      <span class="summary-value success">{{ loading ? '' : functionalCount }}</span>
-    </nimble-card-button>
-    <nimble-card-button class="summary-card" [selected]="statusFilter === 'failed'" (click)="onStatusSummaryClick('failed')">
-      <span class="summary-label">Failed</span>
-      <span class="summary-value danger">{{ loading ? '' : failedCount }}</span>
-    </nimble-card-button>
-    <nimble-card-button class="summary-card summary-card-static">
-      <span class="summary-label">Health</span>
-      <span class="summary-value">{{ loading ? '' : (availabilityPercent + '%') }}</span>
-    </nimble-card-button>
-    <nimble-card-button class="summary-card summary-card-static">
-      <span class="summary-label">Avg Latency</span>
-      <span class="summary-value">{{ loading ? '' : (averageLatencyMs !== null ? (averageLatencyMs + ' ms') : 'N/A') }}</span>
-    </nimble-card-button>
+  <section class="summary-grid" aria-label="Service summary" [attr.aria-busy]="loading">
+    <div class="summary-panel-shell">
+      <ok-fv-summary-panel (click)="onSummaryPanelClick($event)">
+        <ok-fv-summary-panel-tile
+          data-filter="all"
+          label="Total Tests"
+          count="{{ loading && !hasHealthData ? '...' : totalServices }}"
+          text-position="under"
+          [selected]="statusFilter === 'all'"
+        ></ok-fv-summary-panel-tile>
+        <ok-fv-summary-panel-tile
+          data-filter="functional"
+          label="Functional"
+          count="{{ loading && !hasHealthData ? '...' : functionalCount }}"
+          text-position="under"
+          [selected]="statusFilter === 'functional'"
+        ></ok-fv-summary-panel-tile>
+        <ok-fv-summary-panel-tile
+          data-filter="failed"
+          label="Failed"
+          count="{{ loading && !hasHealthData ? '...' : failedCount }}"
+          text-position="under"
+          [selected]="statusFilter === 'failed'"
+        ></ok-fv-summary-panel-tile>
+        <ok-fv-summary-panel-tile
+          data-filter="unauthorized"
+          label="Unauthorized"
+          count="{{ loading && !hasHealthData ? '...' : unauthorizedCount }}"
+          text-position="under"
+          [selected]="statusFilter === 'unauthorized'"
+        ></ok-fv-summary-panel-tile>
+        <ok-fv-summary-panel-tile
+          class="summary-panel-tile-static"
+          label="Health"
+          [count]="loading && !hasHealthData ? '...' : availabilityPercent + '%'"
+          text-position="under"
+        ></ok-fv-summary-panel-tile>
+        <ok-fv-summary-panel-tile
+          class="summary-panel-tile-static"
+          label="Avg Latency"
+          [count]="loading && !hasHealthData ? '...' : (averageLatencyMs !== null ? averageLatencyMs + ' ms' : 'N/A')"
+          text-position="under"
+        ></ok-fv-summary-panel-tile>
+      </ok-fv-summary-panel>
+      <div *ngIf="loading" class="summary-loading-status" role="status">
+        <nimble-spinner aria-hidden="true"></nimble-spinner>
+        <span>Updating summary</span>
+      </div>
+    </div>
   </section>
   </div>
 
@@ -56,7 +84,7 @@
   </section>
 
   <nimble-banner *ngIf="error" open severity="error" class="error-banner">
-    <span slot="title">Connection error</span>
+    <span slot="title">{{ errorTitle }}</span>
     {{ error }}
   </nimble-banner>
 
@@ -124,7 +152,7 @@
 
       <div class="output-modal-section">
         <h3>Response Output</h3>
-        <pre class="output-modal-content">{{ selectedOutput.output }}</pre>
+        <pre class="output-modal-content">{{ selectedOutput.fullOutput }}</pre>
       </div>
     </div>
 

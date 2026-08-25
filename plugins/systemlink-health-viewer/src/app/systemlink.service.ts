@@ -12,6 +12,7 @@ export interface EndpointHealth {
   latencyMs: number | null;
   responseCode: number | null;
   output: string;
+  fullOutput: string;
   functional: boolean;
   authRestricted?: boolean;
   body?: unknown;
@@ -22,6 +23,13 @@ export interface AppConfig {
   appName: string;
   appVersion: string;
   appDisplayVersion: string;
+}
+
+export class HealthConfigurationError extends Error {
+  constructor() {
+    super('Unable to load health-check configuration.');
+    this.name = 'HealthConfigurationError';
+  }
 }
 
 interface EndpointCheck {
@@ -112,6 +120,7 @@ export class SystemLinkService {
                     latencyMs: null,
                     responseCode: null,
                     output: `Unexpected health-check failure: ${this.stringifyResponse(error)}`,
+                    fullOutput: `Unexpected health-check failure: ${this.stringifyResponse(error, Number.POSITIVE_INFINITY)}`,
                     functional: false
                   }))
                 )
@@ -172,6 +181,7 @@ export class SystemLinkService {
       latencyMs: null,
       responseCode: null,
       output: '',
+      fullOutput: '',
       functional: true,
       body: check.body
     };
@@ -179,6 +189,7 @@ export class SystemLinkService {
 
   private buildHealth(check: EndpointCheck, status: number, body: any, latencyMs: number, actualBody?: unknown): EndpointHealth {
     const output = this.stringifyResponse(body);
+    const fullOutput = this.stringifyResponse(body, Number.POSITIVE_INFINITY);
     return {
       service: check.service,
       method: check.method,
@@ -188,6 +199,7 @@ export class SystemLinkService {
       latencyMs,
       responseCode: status,
       output,
+      fullOutput,
       functional: status >= 200 && status < 300,
       body: actualBody ?? check.body
     };
@@ -211,6 +223,11 @@ export class SystemLinkService {
         latencyMs,
         responseCode: error.status || null,
         output,
+        fullOutput: isNetworkError
+          ? output
+          : error.error
+            ? this.stringifyResponse(error.error, Number.POSITIVE_INFINITY)
+            : this.stringifyResponse(error.message, Number.POSITIVE_INFINITY),
         functional: false,
         authRestricted: isAuthRestricted,
         body: check.body
@@ -226,6 +243,7 @@ export class SystemLinkService {
       latencyMs,
       responseCode: null,
       output: this.stringifyResponse(error),
+      fullOutput: this.stringifyResponse(error, Number.POSITIVE_INFINITY),
       functional: false,
       body: check.body
     };
@@ -258,10 +276,6 @@ export class SystemLinkService {
       map(checks => {
         this.resolvedChecks = checks;
         return this.resolvedChecks;
-      }),
-      catchError(() => {
-        this.resolvedChecks = [];
-        return of(this.resolvedChecks);
       })
     );
   }
@@ -337,11 +351,13 @@ export class SystemLinkService {
     if (payload && typeof payload === 'object') {
       const root = payload as Record<string, unknown>;
       appendFromEntitlements(root.entitlements);
+      this.appendFromEntitlementMap(root.entitlements, addPartNumber);
 
       const nestedEntitlements = root.entitlements;
       if (nestedEntitlements && typeof nestedEntitlements === 'object') {
         const wrapped = nestedEntitlements as Record<string, unknown>;
         appendFromEntitlements(wrapped.entitlements);
+        this.appendFromEntitlementMap(wrapped, addPartNumber);
       }
 
       const user = root.user;
@@ -351,6 +367,7 @@ export class SystemLinkService {
         if (userEntitlements && typeof userEntitlements === 'object') {
           const wrapped = userEntitlements as Record<string, unknown>;
           appendFromEntitlements(wrapped.entitlements);
+          this.appendFromEntitlementMap(wrapped, addPartNumber);
         }
       }
     }
@@ -378,8 +395,12 @@ export class SystemLinkService {
   private loadTestMappings(): Observable<TestMappingEntry[]> {
     return this.http.get<TestMappingDocument>(this.testMappingPath).pipe(
       map(document => {
+        if (!document || !Array.isArray(document.tests)) {
+          throw new HealthConfigurationError();
+        }
+
         const mappings: TestMappingEntry[] = [];
-        for (const test of document.tests ?? []) {
+        for (const test of document.tests) {
           if (!test?.command || !test?.endpoint || test.enabled === false) {
             continue;
           }
@@ -389,8 +410,32 @@ export class SystemLinkService {
 
         return mappings;
       }),
-      catchError(() => of([]))
+      catchError(() => throwError(() => new HealthConfigurationError()))
     );
+  }
+
+  private appendFromEntitlementMap(
+    value: unknown,
+    addPartNumber: (value: unknown) => void
+  ): void {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return;
+    }
+
+    for (const [key, entitlement] of Object.entries(value)) {
+      if (key.toLowerCase().startsWith('systemlink_edition_') && Boolean(entitlement)) {
+        addPartNumber(key);
+      }
+
+      if (entitlement && typeof entitlement === 'object') {
+        const item = entitlement as Record<string, unknown>;
+        addPartNumber(item.partNumber);
+        if (item.entitlingProduct && typeof item.entitlingProduct === 'object') {
+          const entitlingProduct = item.entitlingProduct as Record<string, unknown>;
+          addPartNumber(entitlingProduct.partNumber);
+        }
+      }
+    }
   }
 
   private getConfiguredBody(test: TestMappingEntry, method: 'GET' | 'POST'): unknown {
@@ -470,8 +515,11 @@ export class SystemLinkService {
     registryMatches: Map<string, RegistryServiceMatch>
   ): EndpointHealth {
     const match = this.getRegistryMatchForCheck(check, registryMatches);
-    const isLive = match.status === null || match.status.toLowerCase() === 'live';
-    const registryState = match.status ?? (health.functional ? 'LIVE' : null);
+    const isLive =
+      match.name === null ||
+      match.status === null ||
+      match.status.toLowerCase() === 'live';
+    const registryState = match.name === null ? null : match.status;
 
     return {
       ...health,
@@ -570,16 +618,16 @@ export class SystemLinkService {
   }
 
 
-  private stringifyResponse(value: unknown): string {
+  private stringifyResponse(value: unknown, maxLength = 500): string {
     if (value === null || value === undefined) {
       return 'No response body';
     }
     if (typeof value === 'string') {
-      return value.length > 300 ? `${value.slice(0, 300)}...` : value;
+      return value.length > maxLength ? `${value.slice(0, maxLength)}...` : value;
     }
     try {
       const json = JSON.stringify(value, null, 2);
-      return json.length > 500 ? `${json.slice(0, 500)}...` : json;
+      return json.length > maxLength ? `${json.slice(0, maxLength)}...` : json;
     } catch {
       return String(value);
     }

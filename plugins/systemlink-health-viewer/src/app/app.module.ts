@@ -5,7 +5,6 @@ import { FormsModule } from '@angular/forms';
 import {
   NimbleBannerModule,
   NimbleButtonModule,
-  NimbleCardButtonModule,
   NimbleDialogModule,
   NimbleIconArrowRotateRightModule,
   NimbleIconCheckModule,
@@ -20,6 +19,8 @@ import { NimbleTableModule } from '@ni/nimble-angular/table';
 import { NimbleTableColumnTextModule } from '@ni/nimble-angular/table-column/text';
 import { NimbleTableColumnMappingModule } from '@ni/nimble-angular/table-column/mapping';
 import { NimbleMappingIconModule } from '@ni/nimble-angular/mapping/icon';
+import { OkFvSummaryPanelModule } from '@ni/ok-angular/fv/summary-panel';
+import { OkFvSummaryPanelTileModule } from '@ni/ok-angular/fv/summary-panel-tile';
 
 import { LinkTextColumnDirective, SeverityTextColumnDirective } from './custom-table-columns';
 
@@ -29,7 +30,6 @@ import './severity-text-column';
 
 const NIMBLE_MODULES = [
   NimbleThemeProviderModule,
-  NimbleCardButtonModule,
   NimbleTextFieldModule,
   NimbleButtonModule,
   NimbleBannerModule,
@@ -43,7 +43,9 @@ const NIMBLE_MODULES = [
   NimbleIconXmarkModule,
   NimbleIconLockModule,
   NimbleIconMagnifyingGlassModule,
-  NimbleIconArrowRotateRightModule
+  NimbleIconArrowRotateRightModule,
+  OkFvSummaryPanelModule,
+  OkFvSummaryPanelTileModule
 ];
 
 /**
