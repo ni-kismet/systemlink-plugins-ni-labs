@@ -22,6 +22,10 @@ It is set up to:
 │   │   ├── app/
 │   │   ├── nipkg.config.json
 │   │   └── package.json
+│   ├── node-license-management/
+│   │   ├── src/
+│   │   ├── nipkg.config.json
+│   │   └── package.json
 │   └── work-item-kanban-board-webapp/
 │       ├── app/
 │       ├── nipkg.config.json

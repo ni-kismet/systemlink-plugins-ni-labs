@@ -1,54 +1,53 @@
 <section class="dashboard sl-page">
-  <header class="app-header">
-    <svg
-      class="app-header__glyph"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="1.8"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-    >
-      <rect x="5" y="2" width="14" height="13" rx="1.5"></rect>
-      <path d="M8 6h8M8 9h8M8 12h4"></path>
-      <circle cx="12" cy="16.4" r="3.3"></circle>
-      <path d="M10.5 16.4l1 1 1.9-2.1"></path>
-      <path d="M10.3 19.2 9.5 22.3 12 20.9 14.5 22.3 13.7 19.2"></path>
-    </svg>
-    <div class="app-header__text">
-      <h1 class="app-header__title">Node License Management</h1>
-      <p class="app-header__subtitle">
-        Track managed vs. unmanaged node license usage across your SystemLink systems.
-      </p>
-    </div>
-    <div class="app-header__actions">
+  <div class="hero">
+    <header class="app-header">
+      <h1>Node License Management</h1>
+      <p *ngIf="demoMode" class="app-version" role="status">Demo data</p>
+      <p class="subhead">Track managed vs. unmanaged node license usage across your SystemLink systems.</p>
+    </header>
+
+    <ng-container *ngIf="!state.isLoading && state.value as model">
+      <section class="summary-grid" aria-label="Node license summary" [attr.aria-busy]="state.isLoading">
+        <div class="summary-panel-shell">
+          <ok-fv-summary-panel>
+            <ok-fv-summary-panel-tile
+              *ngFor="let tile of tiles"
+              [count]="tile.value.toString()"
+              [label]="tile.label"
+              text-position="under"
+              [id]="'node-license-tile-' + tile.key"
+              [attr.aria-describedby]="'node-license-tooltip-' + tile.key"
+              [selected]="activeFilter === tile.key"
+              (click)="selectTile(tile.key)"
+            >
+            </ok-fv-summary-panel-tile>
+          </ok-fv-summary-panel>
+          <nimble-tooltip
+            *ngFor="let tile of tiles"
+            [id]="'node-license-tooltip-' + tile.key"
+            [anchor]="'node-license-tile-' + tile.key"
+            delay="500"
+          >
+            {{ tile.description }}
+          </nimble-tooltip>
+        </div>
+      </section>
+    </ng-container>
+  </div>
+
+  <section class="toolbar" aria-label="Dashboard actions">
+    <div class="toolbar__actions">
       <nimble-button appearance="outline" (click)="exportCsv()">Export CSV</nimble-button>
       <nimble-button appearance="outline" (click)="reload()">Refresh</nimble-button>
     </div>
-  </header>
+  </section>
 
   <sl-error-banner *ngIf="state.error" [message]="state.error"></sl-error-banner>
   <sl-loading-state *ngIf="state.isLoading"></sl-loading-state>
 
   <ng-container *ngIf="!state.isLoading && state.value as model">
-    <section class="summary">
-      <button
-        type="button"
-        class="summary__item"
-        *ngFor="let tile of tiles"
-        [class.summary__item--active]="activeFilter === tile.key"
-        (click)="selectTile(tile.key)"
-        (mouseenter)="showTip($event, tile.description, true)"
-        (mousemove)="showTip($event, tile.description, true)"
-        (mouseleave)="hideTip()"
-      >
-        <span class="summary__value" [style.color]="tile.color">{{ tile.value }}</span>
-        <span class="summary__label">{{ tile.label }}</span>
-      </button>
-    </section>
-
-    <section class="dashboard__charts">
+    <div class="dashboard__scroll-area">
+      <section class="dashboard__charts">
       <article class="chart-card">
         <h3>Unmanaged / Managed Nodes</h3>
         <div class="chart-card__body chart-card__body--pie">
@@ -168,14 +167,14 @@
           </ul>
         </div>
       </article>
-    </section>
+      </section>
 
-    <section class="dashboard__table">
+      <section class="dashboard__table">
       <nimble-spinner class="table-spinner" *ngIf="enriching" title="Updating results…"></nimble-spinner>
       <nimble-table
         id-field-name="rowId"
         [data$]="detailData$"
-        style="--ni-nimble-fail-color: #5b9bd5;"
+        [style.--ni-nimble-fail-color]="unmanagedColor"
       >
         <nimble-table-column-anchor
           label-field-name="alias"
@@ -189,6 +188,7 @@
         >
           Alias
         </nimble-table-column-anchor>
+        <nimble-table-column-text field-name="id">Minion ID</nimble-table-column-text>
         <nimble-table-column-text field-name="hostName">Host Name</nimble-table-column-text>
         <nimble-table-column-mapping field-name="nodeType" key-type="string">
           Node Type
@@ -239,7 +239,8 @@
           Result
         </nimble-table-column-anchor>
       </nimble-table>
-    </section>
+      </section>
+    </div>
   </ng-container>
 
   <div

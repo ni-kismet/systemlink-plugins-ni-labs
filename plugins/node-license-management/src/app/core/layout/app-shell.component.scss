@@ -6,6 +6,7 @@
 .shell__content {
   display: block;
   height: 100%;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   background: var(--app-background);
 }

@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 
+import { createDemoHomePageModel } from '../demo/demo-home-data';
 import { SystemLinkContextService } from './systemlink-context.service';
 
 export interface TrendPoint {
@@ -109,14 +110,24 @@ export class WebappHomeDataService {
   private readonly maxConcurrentRequests = 6;
   private activeRequests = 0;
   private readonly requestWaiters: (() => void)[] = [];
+  readonly isDemoMode = this.isLocalDemoRequested();
 
   constructor(private readonly context: SystemLinkContextService) {}
 
   async load(): Promise<HomePageModel> {
-    const now = this.firstOfMonthUtc(new Date());
+    if (this.isDemoMode) {
+      return createDemoHomePageModel();
+    }
+
+    const now = new Date();
+    const currentMonth = this.firstOfMonthUtc(now);
     const windows = Array.from({ length: MONTHS_TO_BUILD }, (_, m) => {
-      const snapshot = this.addMonthsUtc(now, -m);
-      return { snapshot, windowStart: this.addMonthsUtc(snapshot, -LICENSE_DURATION) };
+      const snapshot = m === 0 ? now : this.addMonthsUtc(currentMonth, -m);
+      const windowStart =
+        m === 0
+          ? this.addMonthsPreservingUtcDay(snapshot, -LICENSE_DURATION)
+          : this.addMonthsUtc(snapshot, -LICENSE_DURATION);
+      return { snapshot, windowStart };
     });
 
     // Kick off every query that doesn't depend on virtual-node support so the systems queries and
@@ -186,7 +197,6 @@ export class WebappHomeDataService {
       connectionState: r.connectionState ?? null,
       fromResult: false,
     }));
-    const virtualHosts = new Set(virtual.map((v) => v.host));
 
     const trend: TrendPoint[] = [];
     let currentManaged: StatusRecord[] = [];
@@ -201,11 +211,10 @@ export class WebappHomeDataService {
       const staleIds = new Set(
         managed
           .filter((s) => {
-            if (s.lastUpdated === null || s.lastUpdated > staleCutoff) {
+            if (s.connectionState === 'CONNECTED') {
               return false;
             }
-            // On SLE the connection state is known; a still-CONNECTED node is not stale.
-            return s.connectionState !== 'CONNECTED';
+            return s.lastUpdated === null || s.lastUpdated <= staleCutoff;
           })
           .map((s) => s.id),
       );
@@ -214,6 +223,8 @@ export class WebappHomeDataService {
         nodeType: 'Managed',
         status: staleIds.has(s.id) ? 'Inactive' : 'Active',
       }));
+      const virtualSnapshot = virtual.filter((s) => s.created !== null && s.created <= snapshot);
+      const virtualHosts = new Set(virtualSnapshot.map((v) => v.host));
       const managedHosts = new Set<string>();
       for (const s of managedSnapshot) {
         managedHosts.add(s.host.toUpperCase());
@@ -317,9 +328,12 @@ export class WebappHomeDataService {
         });
       }
 
-      const combined: NodeRecord[] = [...resultRows, ...virtual];
+      const combined: NodeRecord[] = [
+        ...resultRows.filter((r) => !virtualHosts.has(r.host.toUpperCase())),
+        ...virtualSnapshot,
+      ];
       const unmanagedRows: StatusRecord[] = combined
-        .filter((r) => !managedHosts.has(r.host))
+        .filter((r) => virtualHosts.has(r.host) || !managedHosts.has(r.host))
         .map((r) => ({
           ...r,
           nodeType: 'Unmanaged',
@@ -347,7 +361,7 @@ export class WebappHomeDataService {
 
     // Defer the slow Last Active enrichment (paginated result scan) so the dashboard renders first.
     // Use the actual current time so Last Active matches the result the View Result link opens.
-    const currentWindowStart = this.addMonthsUtc(now, -LICENSE_DURATION);
+    const currentWindowStart = this.addMonthsPreservingUtcDay(now, -LICENSE_DURATION);
     // Hosts known to have results this window; used to target every row that should get a result link.
     const currentResultHostSet = new Set(
       (resultHostsByMonth[0] ?? [])
@@ -700,6 +714,20 @@ export class WebappHomeDataService {
     return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + delta, 1));
   }
 
+  private addMonthsPreservingUtcDay(date: Date, delta: number): Date {
+    const targetMonth = new Date(
+      Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + delta + 1, 0),
+    );
+    const result = new Date(date);
+    result.setUTCDate(1);
+    result.setUTCFullYear(
+      targetMonth.getUTCFullYear(),
+      targetMonth.getUTCMonth(),
+      Math.min(date.getUTCDate(), targetMonth.getUTCDate()),
+    );
+    return result;
+  }
+
   private yearMonthUtc(date: Date): string {
     return `${date.getUTCFullYear()}-${this.pad(date.getUTCMonth() + 1)}`;
   }
@@ -722,5 +750,20 @@ export class WebappHomeDataService {
 
   private pad(value: number): string {
     return value.toString().padStart(2, '0');
+  }
+
+  private isLocalDemoRequested(): boolean {
+    if (typeof window === 'undefined' || !['localhost', '127.0.0.1', '::1'].includes(window.location.hostname)) {
+      return false;
+    }
+
+    const searchValue = new URLSearchParams(window.location.search).get('demo');
+    const hashQueryIndex = window.location.hash.indexOf('?');
+    const hashValue =
+      hashQueryIndex >= 0
+        ? new URLSearchParams(window.location.hash.slice(hashQueryIndex + 1)).get('demo')
+        : null;
+    const value = (searchValue ?? hashValue)?.toLowerCase();
+    return value === 'true' || value === '1';
   }
 }

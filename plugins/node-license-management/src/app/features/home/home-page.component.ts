@@ -13,7 +13,6 @@ interface StatTile {
   key: string;
   label: string;
   value: number;
-  color: string;
   description: string;
 }
 
@@ -48,10 +47,8 @@ interface AxisTick {
   y: number;
 }
 
-const MANAGED_COLOR = '#3aa655';
-const UNMANAGED_COLOR = '#5b9bd5';
-const INACTIVE_COLOR = '#e0b93a';
-const VIRTUAL_COLOR = '#9b6dd6';
+const MANAGED_COLOR = 'var(--ni-nimble-pass-color)';
+const UNMANAGED_COLOR = 'var(--ni-nimble-information-color)';
 
 const BAR_WIDTH_TOTAL = 760;
 const BAR_HEIGHT_TOTAL = 190;
@@ -68,8 +65,7 @@ export class HomePageComponent implements OnInit {
 
   readonly managedColor = MANAGED_COLOR;
   readonly unmanagedColor = UNMANAGED_COLOR;
-  readonly inactiveColor = INACTIVE_COLOR;
-  readonly virtualColor = VIRTUAL_COLOR;
+  readonly demoMode: boolean;
   readonly barWidth = BAR_WIDTH_TOTAL;
   readonly barHeight = BAR_HEIGHT_TOTAL;
   readonly axisLeft = BAR_PADDING.left;
@@ -96,6 +92,7 @@ export class HomePageComponent implements OnInit {
     appViewState: AppViewStateService,
   ) {
     this.state = appViewState.create<HomePageModel>();
+    this.demoMode = dataService.isDemoMode;
   }
 
   ngOnInit(): void {
@@ -200,14 +197,12 @@ export class HomePageComponent implements OnInit {
         key: 'total',
         label: 'Total Nodes',
         value: model.managed + model.unmanaged,
-        color: 'var(--app-strong)',
         description: 'Total licensed nodes: the sum of Managed and Unmanaged nodes.',
       },
       {
         key: 'managed',
         label: 'Managed',
         value: model.managed,
-        color: MANAGED_COLOR,
         description:
           'A system that is not virtual and has a valid host name. Counted against licensing no matter ' +
           'how long it has been online.',
@@ -216,7 +211,6 @@ export class HomePageComponent implements OnInit {
         key: 'unmanaged',
         label: 'Unmanaged',
         value: model.unmanaged,
-        color: UNMANAGED_COLOR,
         description:
           'A system that is not Managed but has reported test results in the last 12 months, or any ' +
           'virtual system regardless of whether the system has results.',
@@ -225,7 +219,6 @@ export class HomePageComponent implements OnInit {
         key: 'inactive',
         label: 'Managed (Inactive)',
         value: model.inactive,
-        color: INACTIVE_COLOR,
         description:
           'A Managed system that has not been online in the last 12 months. Still counted against ' +
           'licensing, so it is a good candidate to remove and free up a license.',
@@ -234,7 +227,6 @@ export class HomePageComponent implements OnInit {
         key: 'virtual',
         label: 'Unmanaged (Virtual)',
         value: model.virtual,
-        color: VIRTUAL_COLOR,
         description: 'A system classified as virtual by SystemLink.',
       },
     ];
