@@ -48,7 +48,7 @@ interface AxisTick {
 }
 
 const MANAGED_COLOR = 'var(--ni-nimble-pass-color)';
-const UNMANAGED_COLOR = 'var(--ni-nimble-information-color)';
+const UNMANAGED_COLOR = 'var(--app-unmanaged-color)';
 
 const BAR_WIDTH_TOTAL = 760;
 const BAR_HEIGHT_TOTAL = 190;
@@ -100,6 +100,9 @@ export class HomePageComponent implements OnInit {
   }
 
   async reload(): Promise<void> {
+    if (this.state.isLoading || this.enriching) {
+      return;
+    }
     this.state = { ...this.state, isLoading: true, error: null };
     this.enriching = false;
     try {
@@ -153,7 +156,10 @@ export class HomePageComponent implements OnInit {
     ];
     // Always export the full data set, regardless of the active summary-card filter.
     const rows = this.allRows;
-    const escape = (value: string): string => `"${(value ?? '').replace(/"/g, '""')}"`;
+    const escape = (value: string): string => {
+      const safeValue = /^[=+\-@]/.test(value) ? `'${value}` : value;
+      return `"${(safeValue ?? '').replace(/"/g, '""')}"`;
+    };
     const lines = [
       columns.map((c) => escape(c.header)).join(','),
       ...rows.map((row) => columns.map((c) => escape(row[c.field])).join(',')),
@@ -262,8 +268,16 @@ export class HomePageComponent implements OnInit {
       const y1 = cy + r * Math.sin(startAngle);
       const x2 = cx + r * Math.cos(endAngle);
       const y2 = cy + r * Math.sin(endAngle);
+      const halfwayX = cx + r * Math.cos(startAngle + Math.PI);
+      const halfwayY = cy + r * Math.sin(startAngle + Math.PI);
+      const path =
+        fraction >= 1
+          ? `M ${cx} ${cy} L ${x1.toFixed(2)} ${y1.toFixed(2)} ` +
+            `A ${r} ${r} 0 1 1 ${halfwayX.toFixed(2)} ${halfwayY.toFixed(2)} ` +
+            `A ${r} ${r} 0 1 1 ${x1.toFixed(2)} ${y1.toFixed(2)} Z`
+          : `M ${cx} ${cy} L ${x1.toFixed(2)} ${y1.toFixed(2)} A ${r} ${r} 0 ${largeArc} 1 ${x2.toFixed(2)} ${y2.toFixed(2)} Z`;
       slices.push({
-        path: `M ${cx} ${cy} L ${x1.toFixed(2)} ${y1.toFixed(2)} A ${r} ${r} 0 ${largeArc} 1 ${x2.toFixed(2)} ${y2.toFixed(2)} Z`,
+        path,
         color: segment.color,
         percent: `${Math.round(fraction * 100)}%`,
         label: segment.label,
@@ -309,7 +323,7 @@ export class HomePageComponent implements OnInit {
       };
     });
 
-    const tickCount = 5;
+    const tickCount = Math.min(5, Math.floor(maxTotal));
     this.axisTicks = Array.from({ length: tickCount + 1 }, (_, i) => {
       const value = Math.round((maxTotal / tickCount) * i);
       return { value, y: this.axisBottom - (value / maxTotal) * plotHeight };

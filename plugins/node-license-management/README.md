@@ -24,11 +24,10 @@ per-node detail with links back to the source system and its latest test result.
 
 ## SystemLink APIs Used
 
-| API / SDK call | Purpose |
-|-----|---------|
-| `/nisysmgmt/v1/query-systems` | Load managed and virtual systems and their grains |
-| `/nitestmonitor/v2/query-result-values` | Find distinct result host names and `SYSTEM_ID`s per month |
-| `/nitestmonitor/v2/query-results` | Resolve each node's latest test result for last-active dates and result links |
+| API / SDK call                    | Purpose                                                                 |
+| --------------------------------- | ----------------------------------------------------------------------- |
+| `/nisysmgmt/v1/query-systems`     | Load managed and virtual systems and their grains                       |
+| `/nitestmonitor/v2/query-results` | Find host/`SYSTEM_ID` pairs per month and resolve latest result details |
 
 ## Local Demo Mode
 
@@ -38,4 +37,3 @@ Start the app from this directory with `npm start`, then open:
 
 Demo mode is enabled only on `localhost`, `127.0.0.1`, or `::1`. It uses local fixture data and
 does not make SystemLink API requests. Remove `?demo=true` from the URL to use live data locally.
-

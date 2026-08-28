@@ -9,12 +9,13 @@
     <ng-container *ngIf="!state.isLoading && state.value as model">
       <section class="summary-grid" aria-label="Node license summary" [attr.aria-busy]="state.isLoading">
         <div class="summary-panel-shell">
-          <ok-fv-summary-panel>
+          <ok-fv-summary-panel size="compact">
             <ok-fv-summary-panel-tile
               *ngFor="let tile of tiles"
               [count]="tile.value.toString()"
               [label]="tile.label"
-              text-position="under"
+              text-position="beside"
+              [attr.data-status]="tile.key"
               [id]="'node-license-tile-' + tile.key"
               [attr.aria-describedby]="'node-license-tooltip-' + tile.key"
               [selected]="activeFilter === tile.key"
@@ -37,8 +38,21 @@
 
   <section class="toolbar" aria-label="Dashboard actions">
     <div class="toolbar__actions">
-      <nimble-button appearance="outline" (click)="exportCsv()">Export CSV</nimble-button>
-      <nimble-button appearance="outline" (click)="reload()">Refresh</nimble-button>
+      <nimble-button appearance="ghost" (click)="exportCsv()">
+        <nimble-icon-download slot="start"></nimble-icon-download>
+        Export CSV
+      </nimble-button>
+      <nimble-button
+        appearance="ghost"
+        content-hidden
+        title="Refresh"
+        aria-label="Refresh"
+        [disabled]="state.isLoading || enriching"
+        (click)="reload()"
+      >
+        <nimble-icon-arrow-rotate-right slot="start"></nimble-icon-arrow-rotate-right>
+        Refresh
+      </nimble-button>
     </div>
   </section>
 

@@ -50,6 +50,11 @@ interface RawSystem {
   connectionState?: string;
 }
 
+interface ResultIdentity {
+  hostName?: string | null;
+  systemId?: string | null;
+}
+
 interface NodeRecord {
   id: string | null;
   host: string;
@@ -133,35 +138,27 @@ export class WebappHomeDataService {
     // Kick off every query that doesn't depend on virtual-node support so the systems queries and
     // the per-month result queries all run concurrently instead of in sequential batches.
     const fleetPromise = this.queryAllSystems('id != null', 'new(id)');
-    const resultHostsPromise = Promise.all(
-      windows.map((w) => this.queryResultHosts(w.windowStart, w.snapshot)),
-    );
-    const nullHostSysIdsPromise = Promise.all(
-      windows.map((w) =>
-        this.querySystemIds('(hostName == null or hostName == "")', w.windowStart, w.snapshot),
-      ),
-    );
-    const hostedSysIdsPromise = Promise.all(
-      windows.map((w) =>
-        this.querySystemIds('hostName != null and hostName != ""', w.windowStart, w.snapshot),
-      ),
+    const resultIdentitiesPromise = Promise.all(
+      windows.map((w) => this.queryResultIdentities(w.windowStart, w.snapshot)),
     );
 
     const virtualSupported = await this.detectVirtualNodeSupport();
     const managedFilter = virtualSupported ? MANAGED_FILTER_WITH_VIRTUAL : MANAGED_FILTER_NO_VIRTUAL;
     const managedProjection = virtualSupported ? MANAGED_PROJECTION_WITH_STATE : MANAGED_PROJECTION_NO_STATE;
 
-    const [managedRaw, virtualRaw, fleetRaw, resultHostsByMonth, nullHostSysIdsByMonth, hostedSysIdsByMonth] =
-      await Promise.all([
-        this.queryAllSystems(managedFilter, managedProjection),
-        virtualSupported ? this.queryAllSystems(VIRTUAL_FILTER, VIRTUAL_PROJECTION) : Promise.resolve([]),
-        fleetPromise,
-        resultHostsPromise,
-        nullHostSysIdsPromise,
-        hostedSysIdsPromise,
-      ]);
+    const [managedRaw, virtualRaw, fleetRaw, resultIdentitiesByMonth] = await Promise.all([
+      this.queryAllSystems(managedFilter, managedProjection),
+      virtualSupported ? this.queryAllSystems(VIRTUAL_FILTER, VIRTUAL_PROJECTION) : Promise.resolve([]),
+      fleetPromise,
+      resultIdentitiesPromise,
+    ]);
     // Every real system id; a SYSTEM_ID on a result that isn't here is an orphaned/misclassified host.
-    const fleetIds = new Set(fleetRaw.map((r) => r.id).filter((id): id is string => !!id));
+    const fleetIds = new Set(
+      fleetRaw
+        .map((r) => r.id)
+        .filter((id): id is string => !!id)
+        .map((id) => id.toUpperCase()),
+    );
 
     const managed: NodeRecord[] = managedRaw.map((r) => {
       const rawHost = (r.host ?? '').toString().trim();
@@ -235,75 +232,55 @@ export class WebappHomeDataService {
       }
 
       // --- Unmanaged snapshot (Test Monitor result hosts + virtual, minus managed) ---
-      const resultHosts = resultHostsByMonth[m];
-      const seenResultHosts = new Set<string>();
+      const resultIdentities = resultIdentitiesByMonth[m];
+      const seenResultIdentities = new Set<string>();
       const resultRows: NodeRecord[] = [];
       let hasNullHost = false;
       let hasEmptyHost = false;
-      for (const raw of resultHosts) {
-        if (raw === null || raw === undefined) {
-          hasNullHost = true;
+      for (const identity of resultIdentities) {
+        const hostValue = identity.hostName == null ? null : identity.hostName.toString().trim();
+        const systemIdValue = identity.systemId == null ? '' : identity.systemId.toString().trim();
+        if (!systemIdValue) {
+          if (hostValue === null) {
+            hasNullHost = true;
+          } else if (hostValue === '') {
+            hasEmptyHost = true;
+          }
+        }
+        const hostKey = (hostValue ?? '').toUpperCase();
+        const systemIdKey = systemIdValue.toUpperCase();
+        const identityKey = systemIdKey
+          ? `system:${systemIdKey}`
+          : hostKey
+            ? `host:${hostKey}`
+            : '';
+        if (!identityKey || seenResultIdentities.has(identityKey)) {
           continue;
         }
-        const trimmed = raw.toString().trim();
-        if (trimmed === '') {
-          hasEmptyHost = true;
+        seenResultIdentities.add(identityKey);
+        if (systemIdKey && fleetIds.has(systemIdKey)) {
           continue;
         }
-        const key = trimmed.toUpperCase();
-        if (seenResultHosts.has(key)) {
+        if (hostKey && virtualHosts.has(hostKey)) {
           continue;
         }
-        seenResultHosts.add(key);
+        const displayHost = hostValue || systemIdValue;
         resultRows.push({
           id: null,
-          host: key,
-          hostRaw: trimmed,
+          host: displayHost.toUpperCase(),
+          hostRaw: displayHost,
           created: null,
           lastUpdated: null,
           connectionState: null,
           fromResult: true,
-        });
-      }
-      // Results whose host is misclassified under SYSTEM_ID: each distinct SYSTEM_ID that is not a
-      // real system (orphaned) and never appears with a host name is a distinct unmanaged node.
-      const hostedSysIds = new Set(
-        hostedSysIdsByMonth[m]
-          .map((s) => (s ?? '').toString().trim().toUpperCase())
-          .filter((s) => s),
-      );
-      let emptySystemIdExists = false;
-      for (const raw of nullHostSysIdsByMonth[m]) {
-        const value = (raw ?? '').toString().trim();
-        if (!value) {
-          emptySystemIdExists = true;
-          continue;
-        }
-        const key = value.toUpperCase();
-        if (
-          fleetIds.has(value) ||
-          managedHosts.has(key) ||
-          virtualHosts.has(key) ||
-          seenResultHosts.has(key) ||
-          hostedSysIds.has(key)
-        ) {
-          continue;
-        }
-        seenResultHosts.add(key);
-        resultRows.push({
-          id: null,
-          host: value,
-          hostRaw: value,
-          created: null,
-          lastUpdated: null,
-          connectionState: null,
-          fromResult: true,
-          resultFilterOverride: `systemId == "${value.replace(/"/g, '\\"')}"`,
+          resultFilterOverride: systemIdValue
+            ? `systemId == "${systemIdValue.replace(/"/g, '\\"')}"`
+            : undefined,
         });
       }
 
       // NULL / empty host results that also lack a SYSTEM_ID collapse to one node each.
-      if (hasNullHost && emptySystemIdExists) {
+      if (hasNullHost) {
         resultRows.push({
           id: null,
           host: '(no host name)',
@@ -315,7 +292,7 @@ export class WebappHomeDataService {
           resultFilterOverride: 'hostName == null and (systemId == null or systemId == "")',
         });
       }
-      if (hasEmptyHost && emptySystemIdExists) {
+      if (hasEmptyHost) {
         resultRows.push({
           id: null,
           host: '(empty host name)',
@@ -364,8 +341,8 @@ export class WebappHomeDataService {
     const currentWindowStart = this.addMonthsPreservingUtcDay(now, -LICENSE_DURATION);
     // Hosts known to have results this window; used to target every row that should get a result link.
     const currentResultHostSet = new Set(
-      (resultHostsByMonth[0] ?? [])
-        .map((h) => (h ?? '').toString().trim().toUpperCase())
+      (resultIdentitiesByMonth[0] ?? [])
+        .map((identity) => (identity.hostName ?? '').toString().trim().toUpperCase())
         .filter((h) => h),
     );
 
@@ -436,48 +413,45 @@ export class WebappHomeDataService {
     return this.virtualNodesSupported;
   }
 
-  private async queryResultHosts(windowStart: Date, snapshot: Date): Promise<(string | null)[]> {
-    const url = this.context.buildApiUrl('nitestmonitor/v2/query-result-values');
+  private async queryResultIdentities(windowStart: Date, snapshot: Date): Promise<ResultIdentity[]> {
+    const url = this.context.buildApiUrl('nitestmonitor/v2/query-results');
     const filter = `updatedAt >= "${windowStart.toISOString()}" and updatedAt <= "${snapshot.toISOString()}"`;
-    const response = await this.fetchWithRetry(
-      url,
-      this.context.buildRequestInit({
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ field: 'HOST_NAME', filter }),
-      }),
-    );
-    if (!response.ok) {
-      throw new Error(`query-result-values failed (${response.status})`);
-    }
-    const payload = (await response.json()) as (string | null)[] | { values?: (string | null)[] };
-    return Array.isArray(payload) ? payload : payload.values ?? [];
-  }
+    const identities: ResultIdentity[] = [];
+    let continuationToken: string | undefined;
+    const seenContinuationTokens = new Set<string>();
 
-  /** Distinct SYSTEM_ID values among results matching the given hostName clause, within the window. */
-  private async querySystemIds(
-    hostClause: string,
-    windowStart: Date,
-    snapshot: Date,
-  ): Promise<(string | null)[]> {
-    const url = this.context.buildApiUrl('nitestmonitor/v2/query-result-values');
-    const filter =
-      `${hostClause} ` +
-      `and updatedAt >= "${windowStart.toISOString()}" and updatedAt <= "${snapshot.toISOString()}"`;
-    const response = await this.fetchWithRetry(
-      url,
-      this.context.buildRequestInit({
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ field: 'SYSTEM_ID', filter }),
-      }),
-    );
-    if (!response.ok) {
-      // Best-effort grouping; skip if the service rejects the query.
-      return [];
+    for (;;) {
+      const response = await this.fetchWithRetry(
+        url,
+        this.context.buildRequestInit({
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            filter,
+            take: PAGE_SIZE,
+            projection: ['HOST_NAME', 'SYSTEM_ID'],
+            continuationToken,
+          }),
+        }),
+      );
+      if (!response.ok) {
+        throw new Error(`query-results failed (${response.status})`);
+      }
+      const payload = (await response.json()) as {
+        results?: ResultIdentity[];
+        continuationToken?: string;
+      };
+      const results = payload.results ?? [];
+      identities.push(...results);
+      const nextToken = payload.continuationToken;
+      if (!nextToken || results.length === 0 || seenContinuationTokens.has(nextToken)) {
+        break;
+      }
+      seenContinuationTokens.add(nextToken);
+      continuationToken = nextToken;
     }
-    const payload = (await response.json()) as (string | null)[] | { values?: (string | null)[] };
-    return Array.isArray(payload) ? payload : payload.values ?? [];
+
+    return identities;
   }
 
   /** Fills Last Active and Result links for detail rows via a single paged results scan. */
@@ -524,9 +498,9 @@ export class WebappHomeDataService {
     const latestByHost = new Map<string, { ts: Date | null; id?: string }>();
     let targetsFound = 0;
     let continuationToken: string | undefined;
-    const maxPages = 60;
+    const seenContinuationTokens = new Set<string>();
 
-    for (let page = 0; page < maxPages && targetsFound < targetKeys.size; page++) {
+    for (;;) {
       const response = await this.fetchWithRetry(
         url,
         this.context.buildRequestInit({
@@ -561,10 +535,17 @@ export class WebappHomeDataService {
           targetsFound++;
         }
       }
-      continuationToken = payload.continuationToken;
-      if (!continuationToken || results.length === 0) {
+      const nextToken = payload.continuationToken;
+      if (
+        !nextToken ||
+        results.length === 0 ||
+        targetsFound >= targetKeys.size ||
+        seenContinuationTokens.has(nextToken)
+      ) {
         break;
       }
+      seenContinuationTokens.add(nextToken);
+      continuationToken = nextToken;
     }
 
     for (const row of records) {

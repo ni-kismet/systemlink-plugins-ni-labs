@@ -4,6 +4,8 @@ import { NgModule } from '@angular/core';
 import {
   NimbleBannerModule,
   NimbleButtonModule,
+  NimbleIconArrowRotateRightModule,
+  NimbleIconDownloadModule,
   NimbleSpinnerModule,
   NimbleThemeProviderModule,
   NimbleTooltipModule,
@@ -40,6 +42,8 @@ import { LoadingStateComponent } from './shared/components/loading-state.compone
     NimbleLabelProviderCoreModule,
     NimbleBannerModule,
     NimbleButtonModule,
+    NimbleIconArrowRotateRightModule,
+    NimbleIconDownloadModule,
     NimbleSpinnerModule,
     NimbleTableModule,
     NimbleTooltipModule,

@@ -3,6 +3,7 @@
 This repository is a source repo for NI Labs plugins that are distributed through the Plugin Manager for SystemLink catalog.
 
 It is set up to:
+
 - build one or more plugin payloads from this repo
 - package each plugin as a `.nipkg` with embedded Plugin Manager metadata
 - publish the reviewed `.nipkg` as a GitHub release asset in this repo
@@ -41,6 +42,7 @@ It is set up to:
 ## How publishing works
 
 Each plugin lives under `plugins/<plugin-name>/` and must provide:
+
 - a plugin payload directory such as `app/` for webapps or `notebook/` for notebooks
 - a `package.json` with at least a `build` script
 - a `nipkg.config.json` containing the package metadata that will be embedded into the `.nipkg`
@@ -48,10 +50,12 @@ Each plugin lives under `plugins/<plugin-name>/` and must provide:
 Each plugin package script should also verify the generated archive before publication so malformed `.nipkg` files are caught locally and in CI.
 
 The `xbPlugin` value in `nipkg.config.json` identifies the Plugin Manager resource type. For example:
+
 - `webapp` packages a browser application payload
 - `notebook` packages one or more `.ipynb` files and exposes them as installable notebook content
 
 The GitHub Actions workflow:
+
 1. discovers plugins from `plugins/*/nipkg.config.json`
 2. builds and packages the selected plugin(s)
 3. computes a thin submission manifest with `schemaVersion`, `nipkgFile`, `sha256`, `sourceRepo`, `releaseTag`, and `sourceCommit`
@@ -61,6 +65,7 @@ The GitHub Actions workflow:
 ## Required secret
 
 Create a classic PAT with `repo` scope and store it in this repository as:
+
 - `PLUGIN_MANAGER_DISPATCH_TOKEN`
 
 That token is used only to dispatch the submission event to the app-store repository.
