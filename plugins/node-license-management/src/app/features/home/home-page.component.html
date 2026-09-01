@@ -1,40 +1,73 @@
 <section class="dashboard sl-page">
-  <div class="hero">
-    <header class="app-header">
-      <h1>Node License Management</h1>
-      <p *ngIf="demoMode" class="app-version" role="status">Demo data</p>
-      <p class="subhead">Track managed vs. unmanaged node license usage across your SystemLink systems.</p>
-    </header>
+  <ok-fv-sticky-header>
+    <div class="hero" slot="header">
+      <header class="app-header">
+        <h1>Node License Management</h1>
+        <p *ngIf="demoMode" class="app-version" role="status">Demo data</p>
+        <p class="subhead">Track managed vs. unmanaged node license usage across your SystemLink systems.</p>
+      </header>
 
-    <ng-container *ngIf="!state.isLoading && state.value as model">
-      <section class="summary-grid" aria-label="Node license summary" [attr.aria-busy]="state.isLoading">
-        <div class="summary-panel-shell">
-          <ok-fv-summary-panel size="compact">
-            <ok-fv-summary-panel-tile
+      <ng-container *ngIf="!state.isLoading && state.value as model">
+        <section class="summary-grid" aria-label="Node license summary" [attr.aria-busy]="state.isLoading">
+          <div class="summary-panel-shell">
+            <ok-fv-summary-panel>
+              <ok-fv-summary-panel-tile
+                *ngFor="let tile of tiles"
+                [count]="tile.value.toString()"
+                [label]="tile.label"
+                text-position="under"
+                [attr.data-status]="tile.key"
+                [id]="'node-license-tile-' + tile.key"
+                [attr.aria-describedby]="'node-license-tooltip-' + tile.key"
+                [selected]="activeFilter === tile.key"
+                (click)="selectTile(tile.key)"
+              >
+              </ok-fv-summary-panel-tile>
+            </ok-fv-summary-panel>
+            <nimble-tooltip
               *ngFor="let tile of tiles"
-              [count]="tile.value.toString()"
-              [label]="tile.label"
-              text-position="beside"
-              [attr.data-status]="tile.key"
-              [id]="'node-license-tile-' + tile.key"
-              [attr.aria-describedby]="'node-license-tooltip-' + tile.key"
-              [selected]="activeFilter === tile.key"
-              (click)="selectTile(tile.key)"
+              [id]="'node-license-tooltip-' + tile.key"
+              [anchor]="'node-license-tile-' + tile.key"
+              delay="500"
             >
-            </ok-fv-summary-panel-tile>
-          </ok-fv-summary-panel>
-          <nimble-tooltip
-            *ngFor="let tile of tiles"
-            [id]="'node-license-tooltip-' + tile.key"
-            [anchor]="'node-license-tile-' + tile.key"
-            delay="500"
-          >
-            {{ tile.description }}
-          </nimble-tooltip>
-        </div>
-      </section>
-    </ng-container>
-  </div>
+              {{ tile.description }}
+            </nimble-tooltip>
+          </div>
+        </section>
+      </ng-container>
+    </div>
+    <header class="app-header app-header--sticky" slot="sticky-header">
+      <h1>Node License Management</h1>
+      <ng-container *ngIf="!state.isLoading && state.value as model">
+        <section class="summary-grid summary-grid--sticky" aria-label="Node license summary">
+          <div class="summary-panel-shell">
+            <ok-fv-summary-panel size="compact">
+              <ok-fv-summary-panel-tile
+                *ngFor="let tile of tiles"
+                [count]="tile.value.toString()"
+                [label]="tile.label"
+                text-position="beside"
+                [attr.data-status]="tile.key"
+                [id]="'node-license-sticky-tile-' + tile.key"
+                [attr.aria-describedby]="'node-license-sticky-tooltip-' + tile.key"
+                [selected]="activeFilter === tile.key"
+                (click)="selectTile(tile.key)"
+              >
+              </ok-fv-summary-panel-tile>
+            </ok-fv-summary-panel>
+            <nimble-tooltip
+              *ngFor="let tile of tiles"
+              [id]="'node-license-sticky-tooltip-' + tile.key"
+              [anchor]="'node-license-sticky-tile-' + tile.key"
+              delay="500"
+            >
+              {{ tile.description }}
+            </nimble-tooltip>
+          </div>
+        </section>
+      </ng-container>
+    </header>
+  </ok-fv-sticky-header>
 
   <section class="toolbar" aria-label="Dashboard actions">
     <div class="toolbar__actions">

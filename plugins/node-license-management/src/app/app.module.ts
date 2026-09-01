@@ -16,6 +16,7 @@ import { NimbleTableModule } from '@ni/nimble-angular/table';
 import { NimbleTableColumnAnchorModule } from '@ni/nimble-angular/table-column/anchor';
 import { NimbleTableColumnMappingModule } from '@ni/nimble-angular/table-column/mapping';
 import { NimbleTableColumnTextModule } from '@ni/nimble-angular/table-column/text';
+import { OkFvStickyHeaderModule } from '@ni/ok-angular/fv/sticky-header';
 import { OkFvSummaryPanelModule } from '@ni/ok-angular/fv/summary-panel';
 import { OkFvSummaryPanelTileModule } from '@ni/ok-angular/fv/summary-panel-tile';
 
@@ -51,6 +52,7 @@ import { LoadingStateComponent } from './shared/components/loading-state.compone
     NimbleTableColumnAnchorModule,
     NimbleTableColumnMappingModule,
     NimbleMappingIconModule,
+    OkFvStickyHeaderModule,
     OkFvSummaryPanelModule,
     OkFvSummaryPanelTileModule,
   ],

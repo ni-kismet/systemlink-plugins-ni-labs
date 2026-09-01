@@ -17,10 +17,10 @@
     "@angular/core": "^20.3.26",
     "@angular/platform-browser": "^20.3.26",
     "@angular/router": "^20.3.26",
-    "@ni/nimble-angular": "^33.6.0",
+    "@ni/nimble-angular": "^33.6.1",
     "@ni/nimble-components": "^35.13.0",
-    "@ni/ok-angular": "^2.7.0",
-    "@ni/ok-components": "^1.8.0",
+    "@ni/ok-angular": "^2.7.1",
+    "@ni/ok-components": "^1.8.1",
     "rxjs": "~7.8.2",
     "tslib": "^2.8.1",
     "zone.js": "~0.15.1"

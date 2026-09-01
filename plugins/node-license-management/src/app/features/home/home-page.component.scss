@@ -30,6 +30,20 @@
   font: var(--ni-nimble-title-plus-1-font);
 }
 
+.app-header--sticky {
+  display: block;
+  padding: 12px var(--page-pad);
+}
+
+.app-header--sticky h1 {
+  margin-bottom: var(--ni-nimble-small-padding);
+  font: var(--ni-nimble-title-font);
+}
+
+.summary-grid--sticky {
+  min-width: 0;
+}
+
 .app-version {
   margin: 2px 0 0;
   color: var(--ni-nimble-placeholder-font-color);
