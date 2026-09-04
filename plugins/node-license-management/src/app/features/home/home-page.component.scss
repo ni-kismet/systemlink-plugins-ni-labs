@@ -82,7 +82,7 @@
 .hero {
   margin: calc(-1 * var(--page-pad)) calc(-1 * var(--page-pad)) 0;
   min-height: 0;
-  padding: 16px var(--page-pad) 8px;
+  padding: 16px var(--page-pad) 16px;
   background: var(--app-surface);
   border-bottom: 1px solid transparent;
 }
@@ -142,11 +142,15 @@
 }
 
 .chart-card {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
   min-width: 0;
   padding: var(--ni-nimble-small-padding) var(--ni-nimble-medium-padding);
   background: var(--app-surface-raised);
   border: 2px solid var(--app-border);
   border-radius: 4px;
+  overflow: hidden;
 }
 
 .chart-card h3 {
@@ -156,20 +160,22 @@
 }
 
 .chart-card__body {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
   gap: var(--ni-nimble-small-padding);
+  min-height: 0;
   padding: 4px;
 }
 
 .chart-card__body--pie {
-  align-items: center;
+  place-items: center;
 }
 
 .pie {
-  width: 100%;
+  width: auto;
+  height: 100%;
   max-width: 240px;
-  height: auto;
+  max-height: 100%;
 }
 
 .pie path,
@@ -184,7 +190,8 @@
 
 .bars {
   width: 100%;
-  height: auto;
+  height: 100%;
+  min-height: 0;
 }
 
 .bars__grid line {
@@ -296,6 +303,20 @@
 .pie__slice--dim,
 .bars__seg--dim {
   opacity: 0.4;
+}
+
+@media (max-width: 800px) {
+  .dashboard__charts {
+    flex-basis: auto;
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .chart-card {
+    height: 304px;
+  }
 }
 
 @media (max-width: 900px) {
