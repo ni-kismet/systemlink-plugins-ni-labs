@@ -35,6 +35,11 @@
   padding: 12px var(--page-pad);
 }
 
+ok-fv-sticky-header::part(sticky-header) {
+  inset-inline-end: 15px !important;
+  width: calc(100% - 15px) !important;
+}
+
 .app-header--sticky h1 {
   margin-bottom: var(--ni-nimble-small-padding);
   font: var(--ni-nimble-title-font);
