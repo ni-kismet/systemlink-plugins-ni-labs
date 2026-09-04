@@ -88,22 +88,6 @@ nimble-theme-provider {
   position: relative;
 }
 
-.summary-loading-status {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--text-soft);
-  font-size: 0.78rem;
-}
-
-.summary-loading-status nimble-spinner {
-  width: 14px;
-  height: 14px;
-}
-
 .summary-panel-tile-static {
   pointer-events: none;
 }
