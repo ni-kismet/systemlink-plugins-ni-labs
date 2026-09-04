@@ -5,7 +5,7 @@
   "description": "A webapp to visualize SystemLink service health, status, and endpoint availability.",
   "section": "Web Apps",
   "maintainer": "Mike Castaneda <mike.castaneda@emerson.com>",
-  "license": "NI-SCL",
+  "license": "MIT",
   "xbPlugin": "webapp",
   "homepage": "https://github.com/ni-kismet/systemlink-plugins-ni-labs",
   "slPluginManagerTags": "ni-labs,webapp,health,monitoring,systemlink,dashboard,nimble",

@@ -1,6 +1,7 @@
 <nimble-theme-provider [theme]="theme">
 <main class="health-app" [class.dark]="theme === 'dark'" [class.light]="theme === 'light'">
-  <div class="hero">
+  <ok-fv-sticky-header>
+  <div class="hero" slot="header">
   <header class="app-header">
     <h1>{{ title }}</h1>
     <p class="app-version" *ngIf="appDisplayVersion">Version {{ appDisplayVersion }}</p>
@@ -51,13 +52,58 @@
           text-position="under"
         ></ok-fv-summary-panel-tile>
       </ok-fv-summary-panel>
-      <div *ngIf="loading" class="summary-loading-status" role="status">
-        <nimble-spinner aria-hidden="true"></nimble-spinner>
-        <span>Updating summary</span>
-      </div>
     </div>
   </section>
   </div>
+
+  <header class="app-header app-header--sticky" slot="sticky-header">
+    <h1>{{ title }}</h1>
+    <section class="summary-grid summary-grid--sticky" aria-label="Service summary" [attr.aria-busy]="loading">
+        <ok-fv-summary-panel size="compact" (click)="onSummaryPanelClick($event)">
+          <ok-fv-summary-panel-tile
+            data-filter="all"
+            label="Total Tests"
+            count="{{ loading && !hasHealthData ? '...' : totalServices }}"
+            text-position="beside"
+            [selected]="statusFilter === 'all'"
+          ></ok-fv-summary-panel-tile>
+          <ok-fv-summary-panel-tile
+            data-filter="functional"
+            label="Functional"
+            count="{{ loading && !hasHealthData ? '...' : functionalCount }}"
+            text-position="beside"
+            [selected]="statusFilter === 'functional'"
+          ></ok-fv-summary-panel-tile>
+          <ok-fv-summary-panel-tile
+            data-filter="failed"
+            label="Failed"
+            count="{{ loading && !hasHealthData ? '...' : failedCount }}"
+            text-position="beside"
+            [selected]="statusFilter === 'failed'"
+          ></ok-fv-summary-panel-tile>
+          <ok-fv-summary-panel-tile
+            data-filter="unauthorized"
+            label="Unauthorized"
+            count="{{ loading && !hasHealthData ? '...' : unauthorizedCount }}"
+            text-position="beside"
+            [selected]="statusFilter === 'unauthorized'"
+          ></ok-fv-summary-panel-tile>
+          <ok-fv-summary-panel-tile
+            class="summary-panel-tile-static"
+            label="Health"
+            [count]="loading && !hasHealthData ? '...' : availabilityPercent + '%'"
+            text-position="beside"
+          ></ok-fv-summary-panel-tile>
+          <ok-fv-summary-panel-tile
+            class="summary-panel-tile-static"
+            label="Avg Latency"
+            [count]="loading && !hasHealthData ? '...' : (averageLatencyMs !== null ? averageLatencyMs + ' ms' : 'N/A')"
+            text-position="beside"
+          ></ok-fv-summary-panel-tile>
+        </ok-fv-summary-panel>
+    </section>
+  </header>
+  </ok-fv-sticky-header>
 
   <section class="toolbar">
       <nimble-text-field

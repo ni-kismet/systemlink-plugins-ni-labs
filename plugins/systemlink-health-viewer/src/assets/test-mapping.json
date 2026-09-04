@@ -109,18 +109,6 @@
                       ]
                   },
                   {
-                      "serviceName":  "RoutineExecutor",
-                      "testName":  "Routine Executor Info",
-                      "command":  "GET",
-                      "buffer":  null,
-                      "endpoint":  "/niroutineexecutor/v1",
-                      "enabled":  true, 
-                      "requireRegistry": false,
-                      "entitlements":  [
-                          "SystemLink_Edition_Base","SystemLink_Edition_Full","SystemLink_Edition_Pro","SystemLink_Edition_Enterprise"
-                      ]
-                  },
-                  {
                       "serviceName":  "Routines",
                       "testName":  "Get Routines V1",
                       "command":  "GET",
