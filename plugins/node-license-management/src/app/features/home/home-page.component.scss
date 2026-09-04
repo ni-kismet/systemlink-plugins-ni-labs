@@ -82,7 +82,7 @@
 .hero {
   margin: calc(-1 * var(--page-pad)) calc(-1 * var(--page-pad)) 0;
   min-height: 0;
-  padding: 16px var(--page-pad) 4px;
+  padding: 16px var(--page-pad) 8px;
   background: var(--app-surface);
   border-bottom: 1px solid transparent;
 }
@@ -94,10 +94,6 @@
 .summary-panel-shell {
   position: relative;
   min-width: 0;
-}
-
-.summary-panel-shell ok-fv-summary-panel::part(items) {
-  padding-left: 2px;
 }
 
 .summary-panel-shell ok-fv-summary-panel-tile[data-status='total'] {
@@ -304,7 +300,11 @@
 
 @media (max-width: 900px) {
   .dashboard__charts {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    flex-basis: auto;
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+    max-height: none;
+    overflow: visible;
   }
 }
 
