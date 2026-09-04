@@ -62,8 +62,7 @@
 
   <header class="app-header app-header--sticky" slot="sticky-header">
     <h1>{{ title }}</h1>
-    <section class="summary-grid summary-grid--sticky" aria-label="Service summary">
-      <div class="summary-panel-shell">
+    <section class="summary-grid summary-grid--sticky" aria-label="Service summary" [attr.aria-busy]="loading">
         <ok-fv-summary-panel size="compact" (click)="onSummaryPanelClick($event)">
           <ok-fv-summary-panel-tile
             data-filter="all"
