@@ -1,0 +1,302 @@
+<section class="dashboard sl-page">
+  <ok-fv-sticky-header>
+    <div class="hero" slot="header">
+      <header class="app-header">
+        <h1>Node License Management</h1>
+        <p *ngIf="demoMode" class="app-version" role="status">Demo data</p>
+        <p class="subhead">Track managed vs. unmanaged node license usage across your SystemLink systems.</p>
+      </header>
+
+      <ng-container *ngIf="!state.isLoading && state.value as model">
+        <section class="summary-grid" aria-label="Node license summary" [attr.aria-busy]="state.isLoading">
+          <div class="summary-panel-shell">
+            <ok-fv-summary-panel>
+              <ok-fv-summary-panel-tile
+                *ngFor="let tile of tiles"
+                [count]="tile.value.toString()"
+                [label]="tile.label"
+                text-position="under"
+                [attr.data-status]="tile.key"
+                [id]="'node-license-tile-' + tile.key"
+                [attr.aria-describedby]="'node-license-tooltip-' + tile.key"
+                [selected]="activeFilter === tile.key"
+                (click)="selectTile(tile.key)"
+              >
+              </ok-fv-summary-panel-tile>
+            </ok-fv-summary-panel>
+            <nimble-tooltip
+              *ngFor="let tile of tiles"
+              [id]="'node-license-tooltip-' + tile.key"
+              [anchor]="'node-license-tile-' + tile.key"
+              delay="500"
+            >
+              {{ tile.description }}
+            </nimble-tooltip>
+          </div>
+        </section>
+      </ng-container>
+    </div>
+    <header class="app-header app-header--sticky" slot="sticky-header">
+      <h1>Node License Management</h1>
+      <ng-container *ngIf="!state.isLoading && state.value as model">
+        <section class="summary-grid summary-grid--sticky" aria-label="Node license summary">
+          <div class="summary-panel-shell">
+            <ok-fv-summary-panel size="compact">
+              <ok-fv-summary-panel-tile
+                *ngFor="let tile of tiles"
+                [count]="tile.value.toString()"
+                [label]="tile.label"
+                text-position="beside"
+                [attr.data-status]="tile.key"
+                [id]="'node-license-sticky-tile-' + tile.key"
+                [attr.aria-describedby]="'node-license-sticky-tooltip-' + tile.key"
+                [selected]="activeFilter === tile.key"
+                (click)="selectTile(tile.key)"
+              >
+              </ok-fv-summary-panel-tile>
+            </ok-fv-summary-panel>
+            <nimble-tooltip
+              *ngFor="let tile of tiles"
+              [id]="'node-license-sticky-tooltip-' + tile.key"
+              [anchor]="'node-license-sticky-tile-' + tile.key"
+              delay="500"
+            >
+              {{ tile.description }}
+            </nimble-tooltip>
+          </div>
+        </section>
+      </ng-container>
+    </header>
+  </ok-fv-sticky-header>
+
+  <section class="toolbar" aria-label="Dashboard actions">
+    <div class="toolbar__actions">
+      <nimble-button appearance="ghost" (click)="exportCsv()">
+        <nimble-icon-download slot="start"></nimble-icon-download>
+        Export CSV
+      </nimble-button>
+      <nimble-button
+        appearance="ghost"
+        content-hidden
+        title="Refresh"
+        aria-label="Refresh"
+        [disabled]="state.isLoading || enriching"
+        (click)="reload()"
+      >
+        <nimble-icon-arrow-rotate-right slot="start"></nimble-icon-arrow-rotate-right>
+        Refresh
+      </nimble-button>
+    </div>
+  </section>
+
+  <sl-error-banner *ngIf="state.error" [message]="state.error"></sl-error-banner>
+  <sl-loading-state *ngIf="state.isLoading"></sl-loading-state>
+
+  <ng-container *ngIf="!state.isLoading && state.value as model">
+    <div class="dashboard__scroll-area">
+      <section class="dashboard__charts">
+      <article class="chart-card">
+        <h3>Unmanaged / Managed Nodes</h3>
+        <div class="chart-card__body chart-card__body--pie">
+          <svg viewBox="0 0 220 220" class="pie" role="img" aria-label="Managed versus unmanaged node share">
+            <g *ngFor="let slice of pieSlices">
+              <path
+                class="pie__slice"
+                [class.pie__slice--active]="hoverSlice === slice.label"
+                [class.pie__slice--dim]="hoverSlice && hoverSlice !== slice.label"
+                [attr.d]="slice.path"
+                [attr.fill]="slice.color"
+                (mouseenter)="hoverSlice = slice.label; showTip($event, slice.label + ': ' + slice.count)"
+                (mousemove)="showTip($event, slice.label + ': ' + slice.count)"
+                (mouseleave)="hoverSlice = null; hideTip()"
+              ></path>
+              <text
+                [attr.x]="slice.labelX"
+                [attr.y]="slice.labelY"
+                text-anchor="middle"
+                dominant-baseline="middle"
+                class="pie__label"
+              >
+                {{ slice.percent }}
+              </text>
+            </g>
+          </svg>
+          <ul class="legend">
+            <li><span class="legend__swatch" [style.background]="managedColor"></span>Managed</li>
+            <li><span class="legend__swatch" [style.background]="unmanagedColor"></span>Unmanaged</li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="chart-card chart-card--wide">
+        <h3>Nodes in Use Over Time (monthly snapshot)</h3>
+        <div class="chart-card__body">
+          <svg
+            [attr.viewBox]="'0 0 ' + barWidth + ' ' + barHeight"
+            class="bars"
+            role="img"
+            aria-label="Managed and unmanaged node counts per month"
+          >
+            <g class="bars__grid">
+              <g *ngFor="let tick of axisTicks">
+                <line [attr.x1]="axisLeft" [attr.y1]="tick.y" [attr.x2]="axisRight" [attr.y2]="tick.y"></line>
+                <text [attr.x]="axisLeft - 8" [attr.y]="tick.y + 4" text-anchor="end" class="bars__axis-label">
+                  {{ tick.value }}
+                </text>
+              </g>
+            </g>
+            <g *ngFor="let bar of bars">
+              <rect
+                class="bars__seg"
+                [class.bars__seg--active]="hoverBar === bar.month + '|u'"
+                [class.bars__seg--dim]="hoverBar && hoverBar !== bar.month + '|u'"
+                [attr.x]="bar.x"
+                [attr.y]="bar.unmanagedY"
+                [attr.width]="bar.barWidth"
+                [attr.height]="bar.unmanagedHeight"
+                [attr.fill]="unmanagedColor"
+                (mouseenter)="hoverBar = bar.month + '|u'; showTip($event, bar.month + ' · Unmanaged: ' + bar.unmanaged)"
+                (mousemove)="showTip($event, bar.month + ' · Unmanaged: ' + bar.unmanaged)"
+                (mouseleave)="hoverBar = null; hideTip()"
+              ></rect>
+              <rect
+                class="bars__seg"
+                [class.bars__seg--active]="hoverBar === bar.month + '|m'"
+                [class.bars__seg--dim]="hoverBar && hoverBar !== bar.month + '|m'"
+                [attr.x]="bar.x"
+                [attr.y]="bar.managedY"
+                [attr.width]="bar.barWidth"
+                [attr.height]="bar.managedHeight"
+                [attr.fill]="managedColor"
+                (mouseenter)="hoverBar = bar.month + '|m'; showTip($event, bar.month + ' · Managed: ' + bar.managed)"
+                (mousemove)="showTip($event, bar.month + ' · Managed: ' + bar.managed)"
+                (mouseleave)="hoverBar = null; hideTip()"
+              ></rect>
+              <text
+                *ngIf="bar.unmanagedHeight > 14"
+                [attr.x]="bar.x + bar.barWidth / 2"
+                [attr.y]="bar.unmanagedLabelY"
+                text-anchor="middle"
+                class="bars__value"
+              >
+                {{ bar.unmanaged }}
+              </text>
+              <text
+                *ngIf="bar.managedHeight > 14"
+                [attr.x]="bar.x + bar.barWidth / 2"
+                [attr.y]="bar.managedLabelY"
+                text-anchor="middle"
+                class="bars__value"
+              >
+                {{ bar.managed }}
+              </text>
+              <text
+                [attr.x]="bar.x + bar.barWidth / 2"
+                [attr.y]="bar.totalLabelY"
+                text-anchor="middle"
+                class="bars__total"
+              >
+                {{ bar.total }}
+              </text>
+              <text
+                [attr.x]="bar.x + bar.barWidth / 2"
+                [attr.y]="axisBottom + 18"
+                text-anchor="middle"
+                class="bars__month"
+              >
+                {{ bar.month }}
+              </text>
+            </g>
+          </svg>
+          <ul class="legend">
+            <li><span class="legend__swatch" [style.background]="unmanagedColor"></span>Count Unmanaged</li>
+            <li><span class="legend__swatch" [style.background]="managedColor"></span>Count Managed</li>
+          </ul>
+        </div>
+      </article>
+      </section>
+
+      <section class="dashboard__table">
+      <nimble-spinner class="table-spinner" *ngIf="enriching" title="Updating results…"></nimble-spinner>
+      <nimble-table
+        id-field-name="rowId"
+        [data$]="detailData$"
+        [style.--ni-nimble-fail-color]="unmanagedColor"
+      >
+        <nimble-table-column-anchor
+          label-field-name="alias"
+          href-field-name="systemUrl"
+          target="_blank"
+          placeholder="&mdash;"
+          appearance="prominent"
+          underline-hidden
+          fractional-width="2.5"
+          min-pixel-width="340"
+        >
+          Alias
+        </nimble-table-column-anchor>
+        <nimble-table-column-text field-name="id">Minion ID</nimble-table-column-text>
+        <nimble-table-column-text field-name="hostName">Host Name</nimble-table-column-text>
+        <nimble-table-column-mapping field-name="nodeType" key-type="string">
+          Node Type
+          <nimble-mapping-icon
+            key="Managed"
+            text="Managed"
+            icon="nimble-icon-circle-filled"
+            severity="success"
+          ></nimble-mapping-icon>
+          <nimble-mapping-icon
+            key="Unmanaged"
+            text="Unmanaged"
+            icon="nimble-icon-circle-filled"
+            severity="error"
+          ></nimble-mapping-icon>
+        </nimble-table-column-mapping>
+        <nimble-table-column-mapping field-name="status" key-type="string">
+          Status
+          <nimble-mapping-icon
+            key="Active"
+            text="Active"
+            icon="nimble-icon-circle-filled"
+            severity="success"
+          ></nimble-mapping-icon>
+          <nimble-mapping-icon
+            key="Inactive"
+            text="Inactive"
+            icon="nimble-icon-circle-filled"
+            severity="warning"
+          ></nimble-mapping-icon>
+          <nimble-mapping-icon
+            key="Virtual"
+            text="Virtual"
+            icon="nimble-icon-circle-filled"
+            severity="information"
+          ></nimble-mapping-icon>
+        </nimble-table-column-mapping>
+        <nimble-table-column-text field-name="registered">Registered</nimble-table-column-text>
+        <nimble-table-column-text field-name="lastActive">Last Active</nimble-table-column-text>
+        <nimble-table-column-anchor
+          label-field-name="resultLabel"
+          href-field-name="resultUrl"
+          target="_blank"
+          placeholder="&mdash;"
+          appearance="prominent"
+          underline-hidden
+        >
+          Result
+        </nimble-table-column-anchor>
+      </nimble-table>
+      </section>
+    </div>
+  </ng-container>
+
+  <div
+    class="chart-tooltip"
+    *ngIf="tooltip.visible"
+    [class.chart-tooltip--wide]="tooltip.wide"
+    [style.left.px]="tooltip.x"
+    [style.top.px]="tooltip.y"
+  >
+    {{ tooltip.text }}
+  </div>
+</section>
