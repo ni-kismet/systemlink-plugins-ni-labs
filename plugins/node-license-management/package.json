@@ -1,0 +1,38 @@
+{
+  "name": "@ni-kismet/node-license-management",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "description": "A read-only SystemLink web app that reports managed, unmanaged, inactive, and virtual node counts with a 12-month trend and per-node detail.",
+  "scripts": {
+    "start": "ng serve --host 0.0.0.0",
+    "build": "ng build",
+    "clean": "rm -rf dist submission-manifest.json",
+    "package": "npm run clean && npm run build && node ../../scripts/build-plugin-package.mjs . && node ../../scripts/verify-plugin-package.mjs .",
+    "submission-manifest": "npm run package && node ../../scripts/create-submission-manifest.mjs ."
+  },
+  "dependencies": {
+    "@angular/common": "^20.3.26",
+    "@angular/compiler": "^20.3.26",
+    "@angular/core": "^20.3.26",
+    "@angular/platform-browser": "^20.3.26",
+    "@angular/router": "^20.3.26",
+    "@ni/nimble-angular": "^33.6.2",
+    "@ni/nimble-components": "^35.13.1",
+    "@ni/ok-angular": "^2.7.3",
+    "@ni/ok-components": "^1.8.3",
+    "rxjs": "~7.8.2",
+    "tslib": "^2.8.1",
+    "zone.js": "~0.15.1"
+  },
+  "devDependencies": {
+    "@angular/build": "^20.3.32",
+    "@angular/cli": "^20.3.26",
+    "@angular/compiler-cli": "^20.3.26",
+    "@angular/localize": "^20.3.26",
+    "typescript": "~5.9.3"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

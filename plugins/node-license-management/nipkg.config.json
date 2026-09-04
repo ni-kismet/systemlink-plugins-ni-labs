@@ -1,0 +1,16 @@
+{
+  "package": "node-license-management",
+  "version": "0.1.0",
+  "displayName": "Node License Management",
+  "description": "A read-only SystemLink web app that reports managed (licensed), unmanaged, inactive, and virtual node counts with a 12-month trend and per-node detail.",
+  "section": "Systems Management",
+  "maintainer": "Michael Castaneda <mike.castaneda@emerson.com>",
+  "homepage": "https://github.com/ni-kismet/systemlink-plugins-ni-labs",
+  "license": "MIT",
+  "xbPlugin": "webapp",
+  "slPluginManagerTags": "ni-labs,webapp,nodes,licensing,systems-management,dashboard",
+  "slPluginManagerMinServerVersion": "2024 Q4",
+  "iconFile": "icon.svg",
+  "buildDir": "dist/nodelicensedashboard/browser",
+  "buildCommand": "npm run build"
+}
