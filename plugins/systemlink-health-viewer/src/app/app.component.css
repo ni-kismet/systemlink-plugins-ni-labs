@@ -39,7 +39,7 @@ nimble-theme-provider {
 
 .hero {
   margin: calc(-1 * var(--page-pad)) calc(-1 * var(--page-pad)) 0;
-  padding: var(--page-pad) var(--page-pad) 20px;
+  padding: var(--ni-nimble-standard-padding) var(--page-pad);
   background: var(--surface);
   border-bottom: 1px solid transparent;
 }
@@ -49,6 +49,22 @@ nimble-theme-provider {
   font-size: 1.75rem;
   font-weight: 600;
   line-height: 1.2;
+}
+
+.app-header--sticky {
+  display: block;
+  margin-bottom: 0;
+  padding: var(--ni-nimble-standard-padding) var(--page-pad);
+}
+
+.app-header--sticky h1 {
+  margin-bottom: 8px;
+  font-size: 1.25rem;
+  line-height: 1.2;
+}
+
+.summary-grid--sticky {
+  min-width: 0;
 }
 
 .app-version {
@@ -70,7 +86,6 @@ nimble-theme-provider {
 
 .summary-panel-shell {
   position: relative;
-  padding-bottom: 22px;
 }
 
 .summary-loading-status {
@@ -91,6 +106,15 @@ nimble-theme-provider {
 
 .summary-panel-tile-static {
   pointer-events: none;
+}
+
+ok-fv-summary-panel-tile[data-filter='functional'] {
+  --ni-nimble-title-plus-2-font-color: var(--status-pass-color);
+}
+
+ok-fv-summary-panel-tile[data-filter='failed'],
+ok-fv-summary-panel-tile[data-filter='unauthorized'] {
+  --ni-nimble-title-plus-2-font-color: var(--status-fail-color);
 }
 
 .toolbar {

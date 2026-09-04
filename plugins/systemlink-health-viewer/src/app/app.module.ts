@@ -21,6 +21,7 @@ import { NimbleTableColumnMappingModule } from '@ni/nimble-angular/table-column/
 import { NimbleMappingIconModule } from '@ni/nimble-angular/mapping/icon';
 import { OkFvSummaryPanelModule } from '@ni/ok-angular/fv/summary-panel';
 import { OkFvSummaryPanelTileModule } from '@ni/ok-angular/fv/summary-panel-tile';
+import { OkFvStickyHeaderModule } from '@ni/ok-angular/fv/sticky-header';
 
 import { LinkTextColumnDirective, SeverityTextColumnDirective } from './custom-table-columns';
 
@@ -44,6 +45,7 @@ const NIMBLE_MODULES = [
   NimbleIconLockModule,
   NimbleIconMagnifyingGlassModule,
   NimbleIconArrowRotateRightModule,
+  OkFvStickyHeaderModule,
   OkFvSummaryPanelModule,
   OkFvSummaryPanelTileModule
 ];
