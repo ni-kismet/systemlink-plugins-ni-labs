@@ -181,25 +181,30 @@ jobs:
         run: |
           set -euo pipefail
 
+          if [[ ! "$RELEASE_TAG" =~ ^[A-Za-z0-9._-]{1,200}$ ]]; then
+            echo 'release_tag must contain only letters, numbers, dots, underscores, and hyphens, and be at most 200 characters.' >&2
+            exit 1
+          fi
+
           RELEASE_JSON=$(gh release view "$RELEASE_TAG" \
             --repo "$GITHUB_REPOSITORY" \
             --json assets)
 
           if [ -n "$REQUESTED_ARTIFACT" ]; then
             if ! jq -e --arg name "$REQUESTED_ARTIFACT" \
-              '[.assets[] | select(.name == $name and (.name | endswith(".nipkg")))] | length == 1' \
+              '[.assets[] | select(.name == $name and (.name | test("^[A-Za-z0-9][A-Za-z0-9._-]*[.]nipkg$")))] | length == 1' \
               <<<"$RELEASE_JSON" >/dev/null; then
-              echo "Requested artifact is not a .nipkg asset in release $RELEASE_TAG: $REQUESTED_ARTIFACT" >&2
+              echo "Requested artifact is not a Plugin Manager-compatible .nipkg asset in release $RELEASE_TAG: $REQUESTED_ARTIFACT" >&2
               exit 1
             fi
             ARTIFACT_NAME="$REQUESTED_ARTIFACT"
           else
-            ARTIFACT_COUNT=$(jq '[.assets[] | select(.name | endswith(".nipkg"))] | length' <<<"$RELEASE_JSON")
+            ARTIFACT_COUNT=$(jq '[.assets[] | select(.name | test("^[A-Za-z0-9][A-Za-z0-9._-]*[.]nipkg$"))] | length' <<<"$RELEASE_JSON")
             if [ "$ARTIFACT_COUNT" -ne 1 ]; then
-              echo "Release $RELEASE_TAG contains $ARTIFACT_COUNT .nipkg assets; provide artifact_name to select one." >&2
+              echo "Release $RELEASE_TAG contains $ARTIFACT_COUNT Plugin Manager-compatible .nipkg assets; provide artifact_name to select one." >&2
               exit 1
             fi
-            ARTIFACT_NAME=$(jq -r '[.assets[] | select(.name | endswith(".nipkg")) | .name] | .[0]' <<<"$RELEASE_JSON")
+            ARTIFACT_NAME=$(jq -r '[.assets[] | select(.name | test("^[A-Za-z0-9][A-Za-z0-9._-]*[.]nipkg$")) | .name] | .[0]' <<<"$RELEASE_JSON")
           fi
 
           DOWNLOAD_DIR="$RUNNER_TEMP/plugin-manager-release"
