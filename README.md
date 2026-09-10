@@ -106,6 +106,12 @@ npm run submission-manifest --workspace @ni-kismet/ni-labs-welcome
    - push a tag matching `<package>-v<version>` to publish a single plugin release, or
    - run the `Publish to Plugin Manager` workflow manually
 
+To submit an existing release without rebuilding a plugin in this repository, run the
+same workflow manually with `release_tag` set. The workflow downloads the only `.nipkg`
+asset from that release, or uses `artifact_name` when the release contains multiple
+`.nipkg` assets, verifies its SHA256, and dispatches the submission PR. You can also
+provide the 40-character build commit as `source_commit` for provenance.
+
 ## Tag convention
 
 Per-plugin release tags use this format:

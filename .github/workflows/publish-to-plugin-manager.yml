@@ -7,6 +7,18 @@ on:
         description: Plugin directory name or package name to publish (blank = all)
         required: false
         type: string
+      release_tag:
+        description: Existing release tag to submit without rebuilding a local plugin
+        required: false
+        type: string
+      artifact_name:
+        description: Optional .nipkg asset name when the release contains more than one
+        required: false
+        type: string
+      source_commit:
+        description: Optional 40-character commit SHA that produced the release artifact
+        required: false
+        type: string
   push:
     tags:
       - '*-v*.*.*'
@@ -31,9 +43,15 @@ jobs:
         env:
           INPUT_PLUGIN: ${{ github.event.inputs.plugin || '' }}
           TAG_NAME: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+          RELEASE_TAG: ${{ github.event.inputs.release_tag || '' }}
         run: |
-          MATRIX=$(node scripts/list-plugins.mjs)
-          COUNT=$(node -e "const items = JSON.parse(process.argv[1]); process.stdout.write(String(items.length));" "$MATRIX")
+          if [ -n "$RELEASE_TAG" ]; then
+            MATRIX='[]'
+            COUNT=0
+          else
+            MATRIX=$(node scripts/list-plugins.mjs)
+            COUNT=$(node -e "const items = JSON.parse(process.argv[1]); process.stdout.write(String(items.length));" "$MATRIX")
+          fi
           echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
           echo "count=$COUNT" >> "$GITHUB_OUTPUT"
           echo "Discovered $COUNT plugin(s): $MATRIX"
@@ -146,9 +164,128 @@ jobs:
 
           echo "Submitted ${{ matrix.package }} via repository_dispatch"
 
+  submit-existing-release:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.release_tag != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    name: Submit existing release
+
+    steps:
+      - name: Resolve release artifact
+        id: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.event.inputs.release_tag }}
+          REQUESTED_ARTIFACT: ${{ github.event.inputs.artifact_name || '' }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$RELEASE_TAG" =~ ^[A-Za-z0-9._-]{1,200}$ ]]; then
+            echo 'release_tag must contain only letters, numbers, dots, underscores, and hyphens, and be at most 200 characters.' >&2
+            exit 1
+          fi
+
+          RELEASE_JSON=$(gh release view "$RELEASE_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --json assets)
+
+          if [ -n "$REQUESTED_ARTIFACT" ]; then
+            if ! jq -e --arg name "$REQUESTED_ARTIFACT" \
+              '[.assets[] | select(.name == $name and (.name | test("^[A-Za-z0-9][A-Za-z0-9._-]*[.]nipkg$")))] | length == 1' \
+              <<<"$RELEASE_JSON" >/dev/null; then
+              echo "Requested artifact is not a Plugin Manager-compatible .nipkg asset in release $RELEASE_TAG: $REQUESTED_ARTIFACT" >&2
+              exit 1
+            fi
+            ARTIFACT_NAME="$REQUESTED_ARTIFACT"
+          else
+            ARTIFACT_COUNT=$(jq '[.assets[] | select(.name | test("^[A-Za-z0-9][A-Za-z0-9._-]*[.]nipkg$"))] | length' <<<"$RELEASE_JSON")
+            if [ "$ARTIFACT_COUNT" -ne 1 ]; then
+              echo "Release $RELEASE_TAG contains $ARTIFACT_COUNT Plugin Manager-compatible .nipkg assets; provide artifact_name to select one." >&2
+              exit 1
+            fi
+            ARTIFACT_NAME=$(jq -r '[.assets[] | select(.name | test("^[A-Za-z0-9][A-Za-z0-9._-]*[.]nipkg$")) | .name] | .[0]' <<<"$RELEASE_JSON")
+          fi
+
+          DOWNLOAD_DIR="$RUNNER_TEMP/plugin-manager-release"
+          mkdir -p "$DOWNLOAD_DIR"
+          gh release download "$RELEASE_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern "$ARTIFACT_NAME" \
+            --dir "$DOWNLOAD_DIR" \
+            --clobber
+
+          ARTIFACT_PATH="$DOWNLOAD_DIR/$ARTIFACT_NAME"
+          if [ ! -f "$ARTIFACT_PATH" ]; then
+            echo "Release asset was not downloaded: $ARTIFACT_NAME" >&2
+            exit 1
+          fi
+
+          echo "artifact_name=$ARTIFACT_NAME" >> "$GITHUB_OUTPUT"
+          echo "sha256=$(sha256sum "$ARTIFACT_PATH" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+      - name: Submit release to Plugin Manager
+        env:
+          PLUGIN_MANAGER_TOKEN: ${{ secrets.PLUGIN_MANAGER_DISPATCH_TOKEN }}
+          SOURCE_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.event.inputs.release_tag }}
+          ARTIFACT_NAME: ${{ steps.release.outputs.artifact_name }}
+          ARTIFACT_SHA256: ${{ steps.release.outputs.sha256 }}
+          SOURCE_COMMIT: ${{ github.event.inputs.source_commit || '' }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "$PLUGIN_MANAGER_TOKEN" ]; then
+            echo 'PLUGIN_MANAGER_DISPATCH_TOKEN is not configured.' >&2
+            exit 1
+          fi
+
+          if [ -n "$SOURCE_COMMIT" ] && [[ ! "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
+            echo 'source_commit must be a 40-character lowercase commit SHA.' >&2
+            exit 1
+          fi
+
+          MANIFEST=$(jq -n \
+            --arg nipkg_file "$ARTIFACT_NAME" \
+            --arg sha256 "$ARTIFACT_SHA256" \
+            --arg source_repo "$SOURCE_REPO" \
+            --arg release_tag "$RELEASE_TAG" \
+            --arg source_commit "$SOURCE_COMMIT" \
+            '{
+              schemaVersion: 2,
+              nipkgFile: $nipkg_file,
+              sha256: $sha256,
+              sourceRepo: $source_repo,
+              releaseTag: $release_tag
+            } | if $source_commit == "" then . else . + {sourceCommit: $source_commit} end')
+
+          curl -fsSL \
+            -X POST \
+            -H 'Accept: application/vnd.github+json' \
+            -H "Authorization: Bearer $PLUGIN_MANAGER_TOKEN" \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            'https://api.github.com/repos/ni-kismet/systemlink-plugin-manager/dispatches' \
+            -d "$(jq -n \
+              --arg event_type 'submit-app' \
+              --argjson manifest "$MANIFEST" \
+              --arg source_repo "$SOURCE_REPO" \
+              --arg release_tag "$RELEASE_TAG" \
+              --arg artifact_name "$ARTIFACT_NAME" \
+              '{
+                event_type: $event_type,
+                client_payload: {
+                  manifest: $manifest,
+                  source_repo: $source_repo,
+                  release_tag: $release_tag,
+                  artifact_name: $artifact_name
+                }
+              }')"
+
+          echo "Submitted $ARTIFACT_NAME from release $RELEASE_TAG via repository_dispatch"
+
   nothing-to-publish:
     needs: discover
-    if: needs.discover.outputs.count == '0'
+    if: needs.discover.outputs.count == '0' && github.event.inputs.release_tag == ''
     runs-on: ubuntu-latest
     steps:
       - run: echo 'No plugins matched the current workflow invocation.'
