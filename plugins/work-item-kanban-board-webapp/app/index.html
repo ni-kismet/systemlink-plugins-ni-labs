@@ -2,9 +2,28 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <script>
+        // SystemLink may serve this webapp without a trailing slash (e.g.
+        // /webapps/app/Default/Kanban%20Board). Relative asset URLs would then
+        // resolve against the parent directory and 404, leaving a blank page.
+        // Inject a <base> tag that forces a trailing slash so all relative
+        // assets resolve against this app's own directory, regardless of how
+        // the host instance serves the URL.
+        (function () {
+            var path = location.pathname;
+            if (path.charAt(path.length - 1) !== '/') {
+                path += '/';
+            }
+            var base = document.createElement('base');
+            base.href = location.origin + path;
+            document.head.appendChild(base);
+        })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Work Item Kanban Board - SystemLink</title>
     <script type="module" src="./components.js"></script>
+    <script src="./time-range-control.js"></script>
+    <script src="./multi-select-control.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -17,26 +36,38 @@
                     <p class="subtitle">Drag work items between columns to update their state</p>
                 </div>
                 <div class="header-actions">
-                    <nimble-button id="refreshBtn" appearance="outline">
+                    <div class="header-search-field">
+                        <nimble-icon-magnifying-glass class="header-search-icon"></nimble-icon-magnifying-glass>
+                        <ok-fv-search-input id="searchFilter" placeholder="Search work items..." title="Search"></ok-fv-search-input>
+                    </div>
+                    <div id="timeRangeMount" class="time-range-mount"></div>
+                    <nimble-button id="refreshBtn" appearance="outline" content-hidden aria-label="Refresh" title="Refresh">
                         <nimble-icon-arrow-rotate-right slot="start"></nimble-icon-arrow-rotate-right>
                         Refresh
+                    </nimble-button>
+                    <nimble-button id="cardViewToggleBtn" appearance="outline" content-hidden aria-label="Toggle card detail density" title="Toggle card detail density">
+                        <nimble-icon-arrow-up-left-and-arrow-down-right id="cardViewToggleIcon" slot="start"></nimble-icon-arrow-up-left-and-arrow-down-right>
+                        Toggle card detail density
                     </nimble-button>
                 </div>
             </div>
         </header>
 
         <nimble-toolbar class="filter-toolbar">
-            <nimble-select id="typeFilter" slot="start" name="typeFilter" appearance="outline" filter-mode="standard" title="Type">
-                <nimble-list-option value="" selected>All Types</nimble-list-option>
-            </nimble-select>
-            <nimble-select id="workspaceFilter" slot="start" name="workspaceFilter" appearance="outline" filter-mode="standard" title="Workspace">
-                <nimble-list-option value="" selected>All Workspaces</nimble-list-option>
-            </nimble-select>
-            <nimble-select id="assigneeFilter" slot="start" name="assigneeFilter" appearance="outline" filter-mode="standard" title="Assigned To">
-                <nimble-list-option value="" selected>All Users</nimble-list-option>
-            </nimble-select>
-            <ok-fv-search-input id="searchFilter" slot="start" placeholder="Search work items..." title="Search"></ok-fv-search-input>
+            <div slot="start" id="workspaceMsMount"></div>
+            <div slot="start" id="typeMsMount"></div>
+            <div slot="start" id="assigneeMsMount"></div>
         </nimble-toolbar>
+
+        <div class="type-legend" id="typeLegend" aria-label="Work item type legend">
+            <span class="legend-item type-testplan">Test Plan</span>
+            <span class="legend-item type-workorder">Work Order</span>
+            <span class="legend-item type-maintenance">Maintenance</span>
+            <span class="legend-item type-calibration">Calibration</span>
+            <span class="legend-item type-job">Job</span>
+            <span class="legend-item type-reservation">Reservation</span>
+            <span class="legend-item type-transportorder">Transport Order</span>
+        </div>
 
         <div id="boardLoading" class="board-loading">
             <nimble-spinner></nimble-spinner>
@@ -96,6 +127,7 @@
         </div>
     </div>
 
+
     <!-- Detail drawer -->
     <div id="detailDrawer" class="detail-drawer" hidden>
         <div class="drawer-backdrop" id="drawerBackdrop"></div>
@@ -105,14 +137,14 @@
                     <h2 id="drawerTitle">Work Item</h2>
                     <a id="drawerSubtitle" class="drawer-subtitle" href="#" target="_blank" rel="noopener noreferrer" hidden></a>
                 </div>
-                <nimble-button id="drawerCloseBtn" appearance="ghost" content-hidden aria-label="Close drawer" title="Close drawer">
+                <nimble-button id="drawerCloseBtn" appearance="ghost" content-hidden aria-label="Cancel" title="Cancel">
                     <nimble-icon-times slot="start"></nimble-icon-times>
-                    Close
+                    Cancel
                 </nimble-button>
             </div>
             <div class="drawer-body" id="drawerBody"></div>
             <div class="drawer-footer">
-                <nimble-button id="drawerCancelBtn" appearance="ghost">Close</nimble-button>
+                <nimble-button id="drawerCancelBtn" appearance="ghost">Cancel</nimble-button>
                 <nimble-button id="drawerSaveBtn" appearance="outline">Save</nimble-button>
             </div>
         </div>

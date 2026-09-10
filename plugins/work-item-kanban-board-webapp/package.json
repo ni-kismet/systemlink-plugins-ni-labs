@@ -1,7 +1,7 @@
 {
   "name": "@ni-kismet/ni-labs-work-item-kanban-board",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "A SystemLink webapp that visualizes work items as a drag-and-drop Kanban board.",
   "scripts": {
