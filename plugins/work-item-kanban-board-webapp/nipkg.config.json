@@ -1,10 +1,10 @@
 {
   "package": "ni-labs-work-item-kanban-board",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "displayName": "Work Item Kanban Board",
   "description": "A drag-and-drop Kanban board for visualizing and managing SystemLink work items by state.",
   "section": "Lab Management",
-  "maintainer": "NI",
+  "maintainer": "Mike Castaneda <mike.castaneda@emerson.com>",
   "homepage": "https://github.com/ni-kismet/systemlink-plugins-ni-labs",
   "license": "MIT",
   "xbPlugin": "webapp",

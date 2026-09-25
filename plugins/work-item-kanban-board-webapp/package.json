@@ -1,12 +1,14 @@
 {
   "name": "@ni-kismet/ni-labs-work-item-kanban-board",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "A SystemLink webapp that visualizes work items as a drag-and-drop Kanban board.",
   "scripts": {
     "clean": "rm -rf dist submission-manifest.json",
     "dev": "vite",
+    "start": "vite",
+    "test": "node --check app/app.js && node --check app/public/multi-select-control.js && node --check app/public/time-range-control.js && npm run build",
     "build": "vite build",
     "package": "npm run clean && npm run build && node ../../scripts/build-plugin-package.mjs . && node ../../scripts/verify-plugin-package.mjs .",
     "submission-manifest": "npm run package && node ../../scripts/create-submission-manifest.mjs ."
@@ -18,6 +20,6 @@
     "@ni/nimble-components": "^35.8.0",
     "@ni/ok-components": "^1.8.3",
     "@ni/spright-components": "^6.18.1",
-    "@ni/systemlink-clients-ts": "^2.1.0"
+    "@ni/systemlink-clients-ts": "^5.0.0"
   }
 }

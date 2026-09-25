@@ -20,3 +20,19 @@ A SystemLink webapp that displays work items as a drag-and-drop Kanban board, or
 | `getWorkItemTypes()` via `@ni/systemlink-clients-ts/work-item` | Populate the type filter |
 | `/niuser/v1/users/query` | Resolve user IDs to display names |
 | `/niuser/v1/workspaces` | Populate the workspace filter |
+
+## Local development
+
+Install dependencies from the repository root, then start the local Vite server:
+
+```bash
+npm run start --workspace @ni-kismet/ni-labs-work-item-kanban-board
+```
+
+Vite development builds use simulated work items, users, and workspaces automatically. Changes made through drag-and-drop or the drawer are kept in the current browser session. To force demo mode in a production build, add `?demo=1` to the URL; use `?demo=0` to force the real SystemLink API path during local development.
+
+Run the local smoke checks with:
+
+```bash
+npm test --workspace @ni-kismet/ni-labs-work-item-kanban-board
+```
