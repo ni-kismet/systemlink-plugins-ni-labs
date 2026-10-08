@@ -15,6 +15,7 @@ import {
     createClient as createUserClient,
     createConfig as createUserConfig,
 } from '@ni/systemlink-clients-ts/user/client';
+import { language, t, translateDocument } from './i18n.js';
 
 // SystemLink SDK clients
 const systemLinkOrigin = window.location.origin;
@@ -29,24 +30,24 @@ const userClient = createUserClient(createUserConfig({
 
 const STATES = ['NEW', 'DEFINED', 'REVIEWED', 'SCHEDULED', 'IN_PROGRESS', 'PENDING_APPROVAL', 'CLOSED'];
 const STATE_LABELS = {
-    NEW: 'New',
-    DEFINED: 'Defined',
-    REVIEWED: 'Reviewed',
-    SCHEDULED: 'Scheduled',
-    IN_PROGRESS: 'In Progress',
-    PENDING_APPROVAL: 'Pending Approval',
-    CLOSED: 'Closed',
-    CANCELED: 'Canceled',
+    NEW: t('New'),
+    DEFINED: t('Defined'),
+    REVIEWED: t('Reviewed'),
+    SCHEDULED: t('Scheduled'),
+    IN_PROGRESS: t('In progress'),
+    PENDING_APPROVAL: t('Pending approval'),
+    CLOSED: t('Closed'),
+    CANCELED: t('Canceled'),
 };
 
 const TYPE_LABELS = {
-    testplan: 'Test Plan',
-    workorder: 'Work Order',
-    maintenance: 'Maintenance',
-    calibration: 'Calibration',
-    job: 'Job',
-    reservation: 'Reservation',
-    transportorder: 'Transport Order',
+    testplan: t('Test plan'),
+    workorder: t('Work order'),
+    maintenance: t('Maintenance'),
+    calibration: t('Calibration'),
+    job: t('Job'),
+    reservation: t('Reservation'),
+    transportorder: t('Transport order'),
 };
 
 const TYPE_ICONS = {
@@ -209,6 +210,7 @@ let timeRangeControl = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     const themeProvider = document.getElementById('theme');
+    localizeStaticContent();
 
     if (isDemoMode && demoModeBadge) {
         demoModeBadge.hidden = false;
@@ -288,9 +290,16 @@ document.addEventListener('DOMContentLoaded', () => {
     updateCardViewToggleButton();
     setupEventListeners();
     // Wire multi-select filter controls
+    const multiSelectStrings = label => ({
+        label,
+        placeholder: t('All'),
+        allLabel: t('All'),
+        searchPlaceholder: t('Search...'),
+        panelLabel: t('{label} options', { label }),
+    });
     msControls.workspace = MultiSelectControl.create({
         mount: '#workspaceMsMount',
-        label: 'Workspace',
+        ...multiSelectStrings(t('Workspace')),
         onChange: () => {
             populateTypeFilter();
             populateAssigneeFilter();
@@ -299,12 +308,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     msControls.type = MultiSelectControl.create({
         mount: '#typeMsMount',
-        label: 'Type',
+        ...multiSelectStrings(t('Type')),
         onChange: () => renderBoard(),
     });
     msControls.assignee = MultiSelectControl.create({
         mount: '#assigneeMsMount',
-        label: 'Assigned To',
+        ...multiSelectStrings(t('Assigned to')),
         onChange: () => renderBoard(),
     });
     void loadWorkItems();
@@ -312,6 +321,27 @@ document.addEventListener('DOMContentLoaded', () => {
     void loadAllUsers();
     void loadWorkspaces();
 });
+
+function localizeStaticContent() {
+    translateDocument();
+    document.title = `${t('Work Item Kanban Board')} - SystemLink`;
+    const coreLabels = document.getElementById('coreLabels');
+    if (coreLabels) {
+        coreLabels.setAttribute('popup-dismiss', t('Close'));
+        coreLabels.setAttribute('popup-icon-error', t('Error'));
+        coreLabels.setAttribute('popup-icon-information', t('Information'));
+        coreLabels.setAttribute('filter-search', t('Search'));
+        coreLabels.setAttribute('filter-no-results', t('No items found'));
+        coreLabels.setAttribute('loading', t('Loading…'));
+        coreLabels.setAttribute('item-remove', t('Remove'));
+    }
+    for (const state of STATES) {
+        const column = document.querySelector(`.kanban-column[data-state="${state}"]`);
+        column?.setAttribute('aria-label', t('{state} work items', { state: STATE_LABELS[state] }));
+        const title = column?.querySelector('.column-title');
+        if (title) title.textContent = STATE_LABELS[state];
+    }
+}
 
 function setupEventListeners() {
     refreshBtn.addEventListener('click', loadWorkItems);
@@ -326,15 +356,28 @@ function setupEventListeners() {
     timeRangeControl = TimeRangeControl.create({
         mount: '#timeRangeMount',
         nimble: true,
-        label: 'Select creation time range',
+        locale: language,
+        label: t('Select creation time range'),
         presets: {
-            all: 'Any time',
-            '24h': 'Last 24 hours',
-            '7d': 'Last 7 days',
-            '15d': 'Last 15 days',
-            '30d': 'Last 30 days',
-            '60d': 'Last 2 months',
-            '180d': 'Last 6 months',
+            all: t('Any time'),
+            '24h': t('Last 24 hours'),
+            '7d': t('Last 7 days'),
+            '15d': t('Last 15 days'),
+            '30d': t('Last 30 days'),
+            '60d': t('Last 2 months'),
+            '180d': t('Last 6 months'),
+        },
+        strings: {
+            apply: t('Apply time range'),
+            absoluteRange: t('Absolute time range'),
+            from: t('From'),
+            to: t('To'),
+            pickStart: t('Pick start date and time'),
+            pickEnd: t('Pick end date and time'),
+            quickRanges: t('Quick ranges'),
+            invalidRange: t('Please enter a valid time range.'),
+            endBeforeStart: t('The end of the range must be after the start.'),
+            rangeTitle: (start, end) => t('{start} to {end}', { start, end }),
         },
         defaultValue: DEFAULT_CREATION_WINDOW,
         onChange: () => void loadWorkItems(),
@@ -385,11 +428,13 @@ function updateCardViewToggleButton() {
     if (!cardViewToggleBtn) return;
 
     const isExpanded = cardViewMode === CARD_VIEW_MODES.expanded;
-    cardViewToggleBtn.title = isExpanded ? 'Compress details' : 'Expand details';
-    cardViewToggleBtn.setAttribute('aria-label', isExpanded ? 'Compress details' : 'Expand details');
+    const toggleLabel = isExpanded ? t('Compress details') : t('Expand details');
+    cardViewToggleBtn.title = toggleLabel;
+    cardViewToggleBtn.setAttribute('aria-label', toggleLabel);
     cardViewToggleBtn.innerHTML = isExpanded
-        ? '<nimble-icon-arrow-down-right-and-arrow-up-left slot="start"></nimble-icon-arrow-down-right-and-arrow-up-left>Compress details'
-        : '<nimble-icon-arrow-up-left-and-arrow-down-right slot="start"></nimble-icon-arrow-up-left-and-arrow-down-right>Expand details';
+        ? '<nimble-icon-arrow-down-right-and-arrow-up-left slot="start"></nimble-icon-arrow-down-right-and-arrow-up-left>'
+        : '<nimble-icon-arrow-up-left-and-arrow-down-right slot="start"></nimble-icon-arrow-up-left-and-arrow-down-right>';
+    cardViewToggleBtn.append(toggleLabel);
 }
 
 function getSystemLinkErrorMessage(result) {
@@ -449,9 +494,12 @@ function getFailedWorkItemsErrorMessage(data) {
         return data.error.message;
     }
     if (failedIds.length > 0) {
-        return `Failed to update work item${failedIds.length === 1 ? '' : 's'}: ${failedIds.join(', ')}`;
+        const ids = failedIds.join(', ');
+        return failedIds.length === 1
+            ? t('Failed to update work item: {ids}', { ids })
+            : t('Failed to update work items: {ids}', { ids });
     }
-    return 'Failed to update one or more work items.';
+    return t('Failed to update one or more work items.');
 }
 
 async function executeSystemLinkRequest(requestPromise) {
@@ -614,7 +662,7 @@ async function loadWorkItems() {
             return;
         }
         console.error('Failed to load work items:', err);
-        showError(`Failed to load work items: ${err.message}`);
+        showError(t('Failed to load work items: {message}', { message: err.message }));
     } finally {
         if (requestId === workItemsLoadId) {
             boardLoading.hidden = true;
@@ -648,12 +696,12 @@ async function updateWorkItemState(workItemId, newState, updateSequence) {
         }
 
         renderBoard();
-        showSuccess(`Moved to ${STATE_LABELS[newState] || newState}`);
+        showSuccess(t('Moved to {state}', { state: STATE_LABELS[newState] || newState }));
         return true;
     } catch (err) {
         if (isLatestUpdate()) {
             console.error('Failed to update work item:', err);
-            showError(`Failed to update: ${err.message}`);
+            showError(t('Failed to update: {message}', { message: err.message }));
         } else {
             console.warn('Stale work item update failed:', err);
         }
@@ -669,7 +717,7 @@ async function loadWorkspaces() {
             allWorkspaces = DEMO_WORKSPACES;
             msControls.workspace?.setOptions(allWorkspaces.map(workspace => ({
                 value: workspace.id,
-                label: `${workspace.name}${workspace.default ? ' (default)' : ''}`,
+                label: workspace.default ? t('{name} (default)', { name: workspace.name }) : workspace.name,
             })));
             return;
         }
@@ -681,7 +729,10 @@ async function loadWorkspaces() {
         // Populate workspace filter
         const workspaceOptions = allWorkspaces
             .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
-            .map(ws => ({ value: ws.id, label: (ws.name || ws.id) + (ws.default ? ' (default)' : '') }));
+            .map(ws => {
+                const name = ws.name || ws.id;
+                return { value: ws.id, label: ws.default ? t('{name} (default)', { name }) : name };
+            });
         msControls.workspace?.setOptions(workspaceOptions);
     } catch (err) {
         console.warn('Failed to load workspaces:', err);
@@ -735,8 +786,8 @@ async function loadAllUsers() {
 }
 
 function getUserDisplayName(userId) {
-    if (!userId) return 'Unassigned';
-    return userDisplayNames[userId] || 'Unknown User';
+    if (!userId) return t('Unassigned');
+    return userDisplayNames[userId] || t('Unknown user');
 }
 
 function updateCardAssigneeLabels() {
@@ -749,14 +800,22 @@ function updateCardAssigneeLabels() {
             label.textContent = assignee;
             label.title = assignee;
         }
-        card.setAttribute('aria-label', `${item.name || 'Untitled'}, ${STATE_LABELS[item.state] || item.state}, assigned to ${assignee}`);
+        card.setAttribute('aria-label', getCardAriaLabel(item, assignee));
     }
+}
+
+function getCardAriaLabel(item, assignee) {
+    return t('{name}, {state}, assigned to {assignee}', {
+        name: item.name || t('Untitled'),
+        state: STATE_LABELS[item.state] || item.state,
+        assignee,
+    });
 }
 
 function populateAssigneeFilter() {
     if (!msControls.assignee) return;
     const scopedItems = getWorkspaceScopedItems();
-    const options = [{ value: '', label: 'Unassigned' }];
+    const options = [{ value: '', label: t('Unassigned') }];
     const activeUserIds = new Set(scopedItems.map(w => w.assignedTo).filter(Boolean));
     const sorted = [...activeUserIds]
         .map(id => ({ value: id, label: getUserDisplayName(id) }))
@@ -768,7 +827,7 @@ function populateAssigneeFilter() {
 function getAssigneeEntries(currentAssigneeId) {
     const entries = new Map(Object.entries(userDisplayNames));
     if (currentAssigneeId && !entries.has(currentAssigneeId)) {
-        entries.set(currentAssigneeId, `Unknown User (${currentAssigneeId})`);
+        entries.set(currentAssigneeId, t('Unknown user ({id})', { id: currentAssigneeId }));
     }
     return [...entries.entries()];
 }
@@ -844,7 +903,7 @@ function renderBoard() {
         if (sorted.length > CARD_RENDER_LIMIT) {
             const showMore = document.createElement('button');
             showMore.className = 'show-more-btn';
-            showMore.textContent = `Show ${sorted.length - CARD_RENDER_LIMIT} more…`;
+            showMore.textContent = t('Show {count} more…', { count: (sorted.length - CARD_RENDER_LIMIT).toLocaleString(language) });
             showMore.addEventListener('click', () => {
                 showMore.remove();
                 sorted.slice(CARD_RENDER_LIMIT).forEach(item => col.appendChild(createCard(item)));
@@ -856,7 +915,7 @@ function renderBoard() {
         if (stateItems.length === 0) {
             const placeholder = document.createElement('div');
             placeholder.className = 'column-placeholder';
-            placeholder.textContent = 'Drop here';
+            placeholder.textContent = t('Drop here');
             col.appendChild(placeholder);
         }
     }
@@ -871,7 +930,7 @@ function createCard(item) {
     card.dataset.state = item.state;
 
     const assignee = getUserDisplayName(item.assignedTo);
-    card.setAttribute('aria-label', `${item.name || 'Untitled'}, ${STATE_LABELS[item.state] || item.state}, assigned to ${assignee}`);
+    card.setAttribute('aria-label', getCardAriaLabel(item, assignee));
     const dueDate = item.schedule?.plannedEndDateTime || item.timeline?.dueDateTime;
     const isOverdue = dueDate &&
         new Date(dueDate) < new Date() &&
@@ -881,8 +940,8 @@ function createCard(item) {
     const plannedEndDate = item.schedule?.plannedEndDateTime;
     const earliestStartDate = item.timeline?.earliestStartDateTime;
     const dueTimelineDate = item.timeline?.dueDateTime;
-    const cardStartLabel = plannedStartDate ? 'Start' : (earliestStartDate ? 'Earliest' : 'Start');
-    const cardEndLabel = plannedEndDate ? 'End' : (dueTimelineDate ? 'Due' : 'End');
+    const cardStartLabel = !plannedStartDate && earliestStartDate ? t('Earliest') : t('Start');
+    const cardEndLabel = !plannedEndDate && dueTimelineDate ? t('Due') : t('End');
     const cardStartValue = plannedStartDate || earliestStartDate;
     const cardEndValue = plannedEndDate || dueTimelineDate;
     const scheduledIndex = STATES.indexOf('SCHEDULED');
@@ -895,7 +954,7 @@ function createCard(item) {
     const parentWorkItemDetail = parentWorkItem
         ? `
             <div class="card-detail-item card-detail-item-wide">
-                <span class="card-detail-label">Parent</span>
+                <span class="card-detail-label">${escapeHtml(t('Parent'))}</span>
                 <span class="card-detail-value" title="${escapeAttr(parentWorkItem.label)}"><a href="${escapeAttr(getParentWorkItemUrl(parentWorkItem.id))}" target="_blank" rel="noopener noreferrer">${escapeHtml(parentWorkItem.label)}</a></span>
             </div>`
         : '';
@@ -903,29 +962,29 @@ function createCard(item) {
         ? `
         <div class="card-detail-grid">
             <div class="card-detail-item">
-                <span class="card-detail-label">${cardStartLabel}</span>
+                <span class="card-detail-label">${escapeHtml(cardStartLabel)}</span>
                 <span class="card-detail-value" title="${escapeAttr(formatCardDateTime(cardStartValue))}">${escapeHtml(formatCardDateTime(cardStartValue))}</span>
             </div>
             <div class="card-detail-item">
-                <span class="card-detail-label">${cardEndLabel}</span>
+                <span class="card-detail-label">${escapeHtml(cardEndLabel)}</span>
                 <span class="card-detail-value" title="${escapeAttr(formatCardDateTime(cardEndValue))}">${escapeHtml(formatCardDateTime(cardEndValue))}</span>
             </div>
             <div class="card-detail-item card-detail-item-wide">
-                <span class="card-detail-label">Part Number</span>
+                <span class="card-detail-label">${escapeHtml(t('Part number'))}</span>
                 <span class="card-detail-value" title="${escapeAttr(partNumber)}">${escapeHtml(partNumber)}</span>
             </div>
             ${parentWorkItemDetail}
         </div>
-        <div class="card-description-block" title="${escapeAttr(description || 'No description')}">
-            <span class="card-detail-label">Description</span>
+        <div class="card-description-block" title="${escapeAttr(description || t('No description'))}">
+            <span class="card-detail-label">${escapeHtml(t('Description'))}</span>
             <span class="card-description-text">${escapeHtml(descriptionPreview)}</span>
         </div>`
         : '';
 
     card.innerHTML = `
-        <button type="button" class="card-title card-open-button" aria-label="Open details for ${escapeAttr(item.name || 'Untitled')}">${escapeHtml(item.name || 'Untitled')}</button>
+        <button type="button" class="card-title card-open-button" aria-label="${escapeAttr(t('Open details for {name}', { name: item.name || t('Untitled') }))}">${escapeHtml(item.name || t('Untitled'))}</button>
         ${!isPreScheduled && !hasScheduleDates
-            ? `<span class="card-unscheduled" title="Not yet scheduled">Unscheduled</span>` : ''}
+            ? `<span class="card-unscheduled" title="${escapeAttr(t('Not yet scheduled'))}">${escapeHtml(t('Unscheduled'))}</span>` : ''}
         ${expandedDetails}
         <div class="card-footer">
             <span class="card-assignee" title="${escapeAttr(assignee)}">
@@ -1040,7 +1099,7 @@ function startInlineEditAssignee(card, item) {
 
     const unassignedOpt = document.createElement('nimble-list-option');
     unassignedOpt.value = '';
-    unassignedOpt.textContent = 'Unassigned';
+    unassignedOpt.textContent = t('Unassigned');
     if (!item.assignedTo) unassignedOpt.setAttribute('selected', '');
     select.appendChild(unassignedOpt);
 
@@ -1080,12 +1139,12 @@ async function saveInlineField(item, updates) {
                 allWorkItems[idx] = { ...allWorkItems[idx], ...updated };
             }
         }
-        showSuccess('Work item updated');
+        showSuccess(t('Work item updated'));
         populateAssigneeFilter();
         renderBoard();
     } catch (err) {
         console.error('Failed to save inline edit:', err);
-        showError(`Failed to save: ${err.message}`);
+        showError(t('Failed to save: {message}', { message: err.message }));
         renderBoard();
     }
 }
@@ -1211,7 +1270,7 @@ function openDrawer(item) {
     drawerOriginalPropertiesSnapshot = getPropertiesSnapshot(item.properties);
     drawerSessionId += 1;
     currentDrawerItem = item;
-    drawerTitle.textContent = item.name || 'Work Item';
+    drawerTitle.textContent = item.name || t('Work item');
     if (item.id) {
         drawerSubtitle.textContent = `#${item.id}`;
         drawerSubtitle.href = getWorkItemDetailsUrl(item.id);
@@ -1243,7 +1302,7 @@ function wirePropertyButtons() {
             const container = document.getElementById('drawer-properties');
             const row = document.createElement('div');
             row.className = 'prop-row';
-            row.innerHTML = `<nimble-text-field class="prop-edit-key" data-original-key="" appearance="underline" placeholder="Key"></nimble-text-field><nimble-text-field class="prop-edit-value" appearance="underline" placeholder="Value"></nimble-text-field><nimble-button class="prop-remove-btn" appearance="ghost" content-hidden title="Remove property" aria-label="Remove property"><nimble-icon-times slot="start"></nimble-icon-times>Remove</nimble-button>`;
+            row.innerHTML = `<nimble-text-field class="prop-edit-key" data-original-key="" appearance="underline" placeholder="${escapeAttr(t('Key'))}"></nimble-text-field><nimble-text-field class="prop-edit-value" appearance="underline" placeholder="${escapeAttr(t('Value'))}"></nimble-text-field>${renderRemovePropertyButton()}`;
             container.appendChild(row);
             row.querySelector('.prop-remove-btn').addEventListener('click', () => row.remove());
             row.querySelector('.prop-edit-key').focus();
@@ -1301,7 +1360,7 @@ async function saveDrawerChanges() {
 
     const newName = nameInput ? nameInput.value.trim() : drawerItem.name || '';
     if (nameInput && !newName) {
-        showError('Name cannot be blank.');
+        showError(t('Name cannot be blank.'));
         nameInput.focus();
         return;
     }
@@ -1343,14 +1402,14 @@ async function saveDrawerChanges() {
         const originalKey = keyField.dataset.originalKey;
         if (!newKey) {
             if (originalKey) {
-                showError('Property keys cannot be blank. Remove the property instead.');
+                showError(t('Property keys cannot be blank. Remove the property instead.'));
                 keyField.focus();
                 return;
             }
             continue;
         }
         if (propertyKeys.has(newKey)) {
-            showError(`Property key "${newKey}" is duplicated.`);
+            showError(t('Property key "{key}" is duplicated.', { key: newKey }));
             keyField.focus();
             return;
         }
@@ -1385,7 +1444,7 @@ async function saveDrawerChanges() {
         && propsChanged
         && getPropertiesSnapshot(currentItem.properties) !== drawerOriginalPropertiesSnapshot;
     if (hasVersionConflict || hasPropertyConflict) {
-        showError('This work item changed while it was open. Close and reopen it before saving.');
+        showError(t('This work item changed while it was open. Close and reopen it before saving.'));
         return;
     }
 
@@ -1413,7 +1472,7 @@ async function saveDrawerChanges() {
             }
         }
 
-        showSuccess('Work item updated');
+        showSuccess(t('Work item updated'));
         populateAssigneeFilter();
         renderBoard();
         if (drawerSessionId === saveSessionId && currentDrawerItem?.id === itemId) {
@@ -1422,7 +1481,7 @@ async function saveDrawerChanges() {
         }
     } catch (err) {
         console.error('Failed to save work item:', err);
-        showError(`Failed to save: ${err.message}`);
+        showError(t('Failed to save: {message}', { message: err.message }));
     } finally {
         if (workItemSaveTokens.get(itemId) === saveToken) {
             workItemSaveTokens.delete(itemId);
@@ -1436,24 +1495,29 @@ async function saveDrawerChanges() {
     }
 }
 
+function renderRemovePropertyButton() {
+    const label = escapeAttr(t('Remove property'));
+    return `<nimble-button class="prop-remove-btn" appearance="ghost" content-hidden title="${label}" aria-label="${label}"><nimble-icon-times slot="start"></nimble-icon-times>${escapeHtml(t('Remove'))}</nimble-button>`;
+}
+
+function formatDateTime(isoString) {
+    return isoString ? new Date(isoString).toLocaleString(language) : '—';
+}
+
 function renderDrawerContent(item) {
-    const typeLabel = TYPE_LABELS[item.type] || item.type || 'Unknown';
+    const typeLabel = TYPE_LABELS[item.type] || item.type || t('Unknown');
     const typeIcon = TYPE_ICONS[item.type] || '📄';
-    const createdAt = item.createdAt ? new Date(item.createdAt).toLocaleString() : '—';
-    const updatedAt = item.updatedAt ? new Date(item.updatedAt).toLocaleString() : '—';
-    const plannedStartDate = item.schedule?.plannedStartDateTime;
-    const plannedEndDate = item.schedule?.plannedEndDateTime;
-    const earliestStartDate = item.timeline?.earliestStartDateTime;
-    const dueTimelineDate = item.timeline?.dueDateTime;
-    const plannedStartDisplay = plannedStartDate ? new Date(plannedStartDate).toLocaleString() : '—';
-    const plannedEndDisplay = plannedEndDate ? new Date(plannedEndDate).toLocaleString() : '—';
-    const earliestStartDisplay = earliestStartDate ? new Date(earliestStartDate).toLocaleString() : '—';
-    const dueDateDisplay = dueTimelineDate ? new Date(dueTimelineDate).toLocaleString() : '—';
+    const createdAt = formatDateTime(item.createdAt);
+    const updatedAt = formatDateTime(item.updatedAt);
+    const plannedStartDisplay = formatDateTime(item.schedule?.plannedStartDateTime);
+    const plannedEndDisplay = formatDateTime(item.schedule?.plannedEndDateTime);
+    const earliestStartDisplay = formatDateTime(item.timeline?.earliestStartDateTime);
+    const dueDateDisplay = formatDateTime(item.timeline?.dueDateTime);
     const parentWorkItem = getParentWorkItemSummary(item);
     const parentWorkItemField = parentWorkItem
         ? `
         <div class="drawer-field">
-            <span class="drawer-label">Parent</span>
+            <span class="drawer-label">${escapeHtml(t('Parent'))}</span>
             <span class="drawer-value"><a class="drawer-parent-link" href="${escapeAttr(getParentWorkItemUrl(parentWorkItem.id))}" target="_blank" rel="noopener noreferrer">${escapeHtml(parentWorkItem.label)}</a></span>
         </div>`
         : '';
@@ -1467,79 +1531,75 @@ function renderDrawerContent(item) {
 
     // Build state options
     const stateOptions = STATES.map(s =>
-        `<nimble-list-option value="${s}" ${s === item.state ? 'selected' : ''}>${STATE_LABELS[s]}</nimble-list-option>`
+        `<nimble-list-option value="${s}" ${s === item.state ? 'selected' : ''}>${escapeHtml(STATE_LABELS[s])}</nimble-list-option>`
     ).join('');
+    const label = text => escapeHtml(t(text));
+    const addPropertyButton = `<nimble-button id="addPropertyBtn" appearance="ghost"><nimble-icon-add slot="start"></nimble-icon-add>${label('Add property')}</nimble-button>`;
 
     return `
         <div class="drawer-field">
-            <span class="drawer-label">Type</span>
+            <span class="drawer-label">${label('Type')}</span>
             <span class="drawer-value">${typeIcon} ${escapeHtml(typeLabel)}</span>
         </div>
         ${parentWorkItemField}
         <div class="drawer-edit-field">
-            <label class="drawer-label" for="edit-name">Name</label>
+            <label class="drawer-label" for="edit-name">${label('Name')}</label>
             <nimble-text-field id="edit-name" appearance="underline" value="${escapeAttr(item.name || '')}"></nimble-text-field>
         </div>
         <div class="drawer-edit-field">
-            <label class="drawer-label" for="edit-state">State</label>
+            <label class="drawer-label" for="edit-state">${label('State')}</label>
             <nimble-select id="edit-state" appearance="underline">
                 ${stateOptions}
             </nimble-select>
         </div>
         <div class="drawer-edit-field">
-            <label class="drawer-label" for="edit-assignee">Assigned To</label>
+            <label class="drawer-label" for="edit-assignee">${label('Assigned to')}</label>
             <nimble-select id="edit-assignee" appearance="underline" filter-mode="standard">
-                <nimble-list-option value="" ${!item.assignedTo ? 'selected' : ''}>Unassigned</nimble-list-option>
+                <nimble-list-option value="" ${!item.assignedTo ? 'selected' : ''}>${label('Unassigned')}</nimble-list-option>
                 ${assigneeOptions}
             </nimble-select>
         </div>
         <div class="drawer-edit-field">
-            <label class="drawer-label" for="edit-partNumber">Part Number</label>
-            <nimble-text-field id="edit-partNumber" appearance="underline" value="${escapeAttr(item.partNumber || '')}" placeholder="Enter part number..."></nimble-text-field>
+            <label class="drawer-label" for="edit-partNumber">${label('Part number')}</label>
+            <nimble-text-field id="edit-partNumber" appearance="underline" value="${escapeAttr(item.partNumber || '')}" placeholder="${escapeAttr(t('Enter part number...'))}"></nimble-text-field>
         </div>
         <div class="drawer-field">
-            <span class="drawer-label">Planned Start</span>
+            <span class="drawer-label">${label('Planned start date')}</span>
             <span class="drawer-value">${escapeHtml(plannedStartDisplay)}</span>
         </div>
         <div class="drawer-field">
-            <span class="drawer-label">Planned End</span>
+            <span class="drawer-label">${label('Planned end date')}</span>
             <span class="drawer-value">${escapeHtml(plannedEndDisplay)}</span>
         </div>
         <div class="drawer-field">
-            <span class="drawer-label">Earliest Start</span>
+            <span class="drawer-label">${label('Earliest start date')}</span>
             <span class="drawer-value">${escapeHtml(earliestStartDisplay)}</span>
         </div>
         <div class="drawer-field">
-            <span class="drawer-label">Due Date</span>
+            <span class="drawer-label">${label('Due date')}</span>
             <span class="drawer-value">${escapeHtml(dueDateDisplay)}</span>
         </div>
         <div class="drawer-field">
-            <span class="drawer-label">Created</span>
+            <span class="drawer-label">${label('Created')}</span>
             <span class="drawer-value">${escapeHtml(createdAt)}</span>
         </div>
         <div class="drawer-field">
-            <span class="drawer-label">Updated</span>
+            <span class="drawer-label">${label('Updated')}</span>
             <span class="drawer-value">${escapeHtml(updatedAt)}</span>
         </div>
         <div class="drawer-edit-field full-width">
-            <label class="drawer-label" for="edit-description">Description</label>
+            <label class="drawer-label" for="edit-description">${label('Description')}</label>
             <nimble-text-area id="edit-description" appearance="outline" rows="5"></nimble-text-area>
         </div>
-        ${item.properties && Object.keys(item.properties).length > 0 ? `
         <div class="drawer-edit-field full-width">
-            <span class="drawer-label">Properties</span>
+            <span class="drawer-label">${label('Properties')}</span>
             <div class="drawer-properties" id="drawer-properties">
-                ${Object.entries(item.properties).map(([k, v]) =>
-                    `<div class="prop-row"><nimble-text-field class="prop-edit-key" data-original-key="${escapeAttr(k)}" appearance="underline" value="${escapeAttr(k)}"></nimble-text-field><nimble-text-field class="prop-edit-value" appearance="underline" value="${escapeAttr(v)}"></nimble-text-field><nimble-button class="prop-remove-btn" appearance="ghost" content-hidden title="Remove property" aria-label="Remove property"><nimble-icon-times slot="start"></nimble-icon-times>Remove</nimble-button></div>`
+                ${Object.entries(item.properties || {}).map(([k, v]) =>
+                    `<div class="prop-row"><nimble-text-field class="prop-edit-key" data-original-key="${escapeAttr(k)}" appearance="underline" value="${escapeAttr(k)}"></nimble-text-field><nimble-text-field class="prop-edit-value" appearance="underline" value="${escapeAttr(v)}"></nimble-text-field>${renderRemovePropertyButton()}</div>`
                 ).join('')}
             </div>
-            <nimble-button id="addPropertyBtn" appearance="ghost"><nimble-icon-add slot="start"></nimble-icon-add>Add property</nimble-button>
-        </div>` : `
-        <div class="drawer-edit-field full-width">
-            <span class="drawer-label">Properties</span>
-            <div class="drawer-properties" id="drawer-properties"></div>
-            <nimble-button id="addPropertyBtn" appearance="ghost"><nimble-icon-add slot="start"></nimble-icon-add>Add property</nimble-button>
-        </div>`}
+            ${addPropertyButton}
+        </div>
     `;
 }
 
@@ -1563,25 +1623,29 @@ function escapeAttr(str) {
     return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+const relativeDayFormat = new Intl.RelativeTimeFormat(language, { numeric: 'auto' });
+const dayCountFormat = new Intl.NumberFormat(language, { style: 'unit', unit: 'day', unitDisplay: 'narrow' });
+
 function formatRelativeDate(isoString) {
     const date = new Date(isoString);
     const now = new Date();
     const diffMs = date - now;
     const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
 
-    if (diffDays < -1) return `${Math.abs(diffDays)}d overdue`;
-    if (diffDays === -1) return 'Yesterday';
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return 'Tomorrow';
-    if (diffDays <= 7) return `${diffDays}d`;
-    return date.toLocaleDateString();
+    if (diffDays < -1) return t('{duration} overdue', { duration: dayCountFormat.format(Math.abs(diffDays)) });
+    if (diffDays <= 1) {
+        const relativeDay = relativeDayFormat.format(diffDays, 'day');
+        return relativeDay.charAt(0).toLocaleUpperCase(language) + relativeDay.slice(1);
+    }
+    if (diffDays <= 7) return dayCountFormat.format(diffDays);
+    return date.toLocaleDateString(language);
 }
 
 function formatCardDateTime(isoString) {
     if (!isoString) return '—';
     const date = new Date(isoString);
     if (Number.isNaN(date.getTime())) return '—';
-    return date.toLocaleString(undefined, {
+    return date.toLocaleString(language, {
         dateStyle: 'short',
         timeStyle: 'short',
     });

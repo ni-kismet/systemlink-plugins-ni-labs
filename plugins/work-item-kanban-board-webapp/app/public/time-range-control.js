@@ -36,6 +36,10 @@
  *   });
  * Preset keys are "<amount><unit>" where unit is m|h|d|w|y (minutes/hours/days/
  * weeks/years), or the special key 'all' (no lower bound → returns null range).
+ *
+ * Localization: pass `locale` (e.g. 'de') for date formatting and `strings`
+ * ({ apply, absoluteRange, from, to, pickStart, pickEnd, quickRanges,
+ * invalidRange, endBeforeStart, rangeTitle(start, end) }) to override UI text.
  */
 (function (global) {
   'use strict';
@@ -162,8 +166,8 @@ nimble-theme-provider[theme="color"] .trc-dialog,
     const parsed = new Date(normalized);
     return isNaN(parsed.getTime()) ? null : parsed;
   }
-  function formatDisplay(d) {
-    return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  function formatDisplay(d, locale) {
+    return d.toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' });
   }
   function relativeStart(value, ref) {
     ref = ref || new Date();
@@ -197,6 +201,20 @@ nimble-theme-provider[theme="color"] .trc-dialog,
     const defaultValue = (options.defaultValue && presets[options.defaultValue]) ? options.defaultValue
       : (presets['90d'] ? '90d' : order[0]);
     const onChange = typeof options.onChange === 'function' ? options.onChange : function () {};
+    const locale = options.locale;
+    const strings = Object.assign({
+      apply: 'Apply time range',
+      absoluteRange: 'Absolute time range',
+      from: 'From',
+      to: 'To',
+      pickStart: 'Pick start date and time',
+      pickEnd: 'Pick end date and time',
+      quickRanges: 'Quick ranges',
+      invalidRange: 'Please enter a valid time range.',
+      endBeforeStart: 'The end of the range must be after the start.',
+      rangeTitle: (start, end) => `${start} to ${end}`,
+    }, options.strings);
+    const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
     const state = { mode: 'preset', value: defaultValue, custom: null };
 
@@ -211,26 +229,26 @@ nimble-theme-provider[theme="color"] .trc-dialog,
     // plain styled button. Either way it is type="button" and wired via click;
     // the form's submit handler covers the Enter key inside the text fields.
     const applyBtnHtml = options.nimble
-      ? '<nimble-button class="trc-apply-nimble" appearance="outline" type="button">Apply time range</nimble-button>'
-      : '<button class="trc-apply" type="button">Apply time range</button>';
+      ? `<nimble-button class="trc-apply-nimble" appearance="outline" type="button">${esc(strings.apply)}</nimble-button>`
+      : `<button class="trc-apply" type="button">${esc(strings.apply)}</button>`;
     dialog.innerHTML = `
       <form class="trc-form" method="dialog">
         <div class="trc-layout">
           <div class="trc-absolute">
-            <div class="trc-title">Absolute time range</div>
+            <div class="trc-title">${esc(strings.absoluteRange)}</div>
             <label class="trc-field">
-              <span>From</span>
+              <span>${esc(strings.from)}</span>
               <div class="trc-input-row">
                 <input class="trc-text trc-start" type="text" placeholder="YYYY-MM-DD HH:mm:ss" required>
-                <button class="trc-pick trc-start-pick" type="button" aria-label="Pick start date and time" title="Pick start date and time">${CAL_SVG}</button>
+                <button class="trc-pick trc-start-pick" type="button" aria-label="${esc(strings.pickStart)}" title="${esc(strings.pickStart)}">${CAL_SVG}</button>
                 <input class="trc-native trc-start-native" type="datetime-local" tabindex="-1" aria-hidden="true">
               </div>
             </label>
             <label class="trc-field">
-              <span>To</span>
+              <span>${esc(strings.to)}</span>
               <div class="trc-input-row">
                 <input class="trc-text trc-end" type="text" placeholder="YYYY-MM-DD HH:mm:ss" required>
-                <button class="trc-pick trc-end-pick" type="button" aria-label="Pick end date and time" title="Pick end date and time">${CAL_SVG}</button>
+                <button class="trc-pick trc-end-pick" type="button" aria-label="${esc(strings.pickEnd)}" title="${esc(strings.pickEnd)}">${CAL_SVG}</button>
                 <input class="trc-native trc-end-native" type="datetime-local" tabindex="-1" aria-hidden="true">
               </div>
             </label>
@@ -239,8 +257,8 @@ nimble-theme-provider[theme="color"] .trc-dialog,
             </div>
             <div class="trc-err" hidden></div>
           </div>
-          <aside class="trc-quick" aria-label="Quick ranges">
-            <div class="trc-title">Quick ranges</div>
+          <aside class="trc-quick" aria-label="${esc(strings.quickRanges)}">
+            <div class="trc-title">${esc(strings.quickRanges)}</div>
             <div class="trc-quick-list"></div>
           </aside>
         </div>
@@ -277,8 +295,8 @@ nimble-theme-provider[theme="color"] .trc-dialog,
     function updateButton() {
       updateQuickState();
       if (state.mode === 'custom' && state.custom) {
-        label.textContent = `${formatDisplay(state.custom.start)} – ${formatDisplay(state.custom.end)}`;
-        btn.title = `${state.custom.start.toLocaleString()} to ${state.custom.end.toLocaleString()}`;
+        label.textContent = `${formatDisplay(state.custom.start, locale)} – ${formatDisplay(state.custom.end, locale)}`;
+        btn.title = strings.rangeTitle(state.custom.start.toLocaleString(locale), state.custom.end.toLocaleString(locale));
         return;
       }
       label.textContent = presets[state.value] || presets[defaultValue];
@@ -343,8 +361,8 @@ nimble-theme-provider[theme="color"] .trc-dialog,
       }
       const start = parseFieldValue(startText.value);
       const end = parseFieldValue(endText.value);
-      if (!start || !end) { errBox.textContent = 'Please enter a valid time range.'; errBox.hidden = false; return; }
-      if (end < start) { errBox.textContent = 'The end of the range must be after the start.'; errBox.hidden = false; return; }
+      if (!start || !end) { errBox.textContent = strings.invalidRange; errBox.hidden = false; return; }
+      if (end < start) { errBox.textContent = strings.endBeforeStart; errBox.hidden = false; return; }
       state.mode = 'custom';
       state.custom = { start, end };
       updateButton();

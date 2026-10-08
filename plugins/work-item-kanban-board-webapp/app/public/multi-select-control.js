@@ -23,6 +23,7 @@
  *     mount: '#toolbar',                 // Element or selector to append into
  *     label: 'Workspace',                // field label rendered above the control
  *     placeholder: 'All',                // shown when nothing is selected
+ *     panelLabel: 'Workspace options',   // popover aria-label (localize with label/allLabel/searchPlaceholder)
  *     options: [{ value: 'a', label: 'Alpha' }, { value: 'b', label: 'Beta' }],
  *     selected: [],                      // initial selected values (empty = All)
  *     onChange: (values, detail) => {
@@ -289,7 +290,7 @@
     btn.innerHTML = '<span class="msc-value"></span><span class="msc-caret" aria-hidden="true"></span>';
     const valueEl = btn.querySelector('.msc-value');
     wrap.appendChild(btn);
-    const panel = elem('div', { class: 'msc-panel', id: panelId, role: 'group', 'aria-label': `${ariaLabel} options` });
+    const panel = elem('div', { class: 'msc-panel', id: panelId, role: 'group', 'aria-label': options.panelLabel || `${ariaLabel} options` });
     panel.hidden = true;
     wrap.appendChild(panel);
 

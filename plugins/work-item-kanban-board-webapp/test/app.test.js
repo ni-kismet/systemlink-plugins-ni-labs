@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import vm from 'node:vm';
+import * as i18n from '../app/i18n.js';
 
 const source = readFileSync(new URL('../app/app.js', import.meta.url), 'utf8')
     .replace(/^import\s*\{[\s\S]*?\}\s*from\s*'[^']+';\s*/gm, '')
@@ -24,6 +25,8 @@ function createHarness() {
     const pendingUpdates = [];
     const context = vm.createContext({
         URLSearchParams,
+        Intl,
+        ...i18n,
         window: { location: { origin: 'http://localhost', search: '?demo=0' } },
         document: {
             addEventListener() {},

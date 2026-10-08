@@ -30,11 +30,12 @@
 </head>
 <body>
 <nimble-theme-provider id="theme">
+    <nimble-label-provider-core id="coreLabels"></nimble-label-provider-core>
     <div class="container">
         <header>
             <div class="header-title">
-                <h1>Work Item Kanban Board</h1>
-                <p class="subtitle">Track work items across lifecycle states.</p>
+                <h1 data-i18n>Work Item Kanban Board</h1>
+                <p class="subtitle" data-i18n>Track work items across lifecycle states.</p>
             </div>
             <div class="header-row">
                 <div class="header-filters">
@@ -45,10 +46,10 @@
                 <div class="header-actions">
                     <div class="header-search-field">
                         <nimble-icon-magnifying-glass class="header-search-icon"></nimble-icon-magnifying-glass>
-                        <ok-fv-search-input id="searchFilter" placeholder="Search work items..." title="Search"></ok-fv-search-input>
+                        <ok-fv-search-input id="searchFilter" placeholder="Search work items" title="Search" data-i18n-attrs="placeholder title"></ok-fv-search-input>
                     </div>
                     <div id="timeRangeMount" class="time-range-mount"></div>
-                    <nimble-button id="refreshBtn" appearance="outline" content-hidden aria-label="Refresh" title="Refresh">
+                    <nimble-button id="refreshBtn" appearance="outline" content-hidden aria-label="Refresh" title="Refresh" data-i18n data-i18n-attrs="aria-label title">
                         <nimble-icon-arrow-rotate-right slot="start"></nimble-icon-arrow-rotate-right>
                         Refresh
                     </nimble-button>
@@ -56,27 +57,27 @@
                         <nimble-icon-arrow-up-left-and-arrow-down-right id="cardViewToggleIcon" slot="start"></nimble-icon-arrow-up-left-and-arrow-down-right>
                         Toggle card detail density
                     </nimble-button>
-                    <span id="demoModeBadge" class="demo-mode-badge" hidden>Demo data</span>
+                    <span id="demoModeBadge" class="demo-mode-badge" hidden data-i18n>Demo data</span>
                 </div>
             </div>
         </header>
 
-        <div class="type-legend" id="typeLegend" aria-label="Work item type legend">
-            <span class="legend-item type-testplan">Test Plan</span>
-            <span class="legend-item type-workorder">Work Order</span>
-            <span class="legend-item type-maintenance">Maintenance</span>
-            <span class="legend-item type-calibration">Calibration</span>
-            <span class="legend-item type-job">Job</span>
-            <span class="legend-item type-reservation">Reservation</span>
-            <span class="legend-item type-transportorder">Transport Order</span>
+        <div class="type-legend" id="typeLegend" aria-label="Work item type legend" data-i18n-attrs="aria-label">
+            <span class="legend-item type-testplan" data-i18n>Test plan</span>
+            <span class="legend-item type-workorder" data-i18n>Work order</span>
+            <span class="legend-item type-maintenance" data-i18n>Maintenance</span>
+            <span class="legend-item type-calibration" data-i18n>Calibration</span>
+            <span class="legend-item type-job" data-i18n>Job</span>
+            <span class="legend-item type-reservation" data-i18n>Reservation</span>
+            <span class="legend-item type-transportorder" data-i18n>Transport order</span>
         </div>
 
         <div id="boardLoading" class="board-loading" role="status" aria-live="polite">
             <nimble-spinner></nimble-spinner>
-            <span>Loading work items...</span>
+            <span data-i18n>Loading work items...</span>
         </div>
 
-        <div id="kanbanBoard" class="kanban-board" hidden aria-label="Work item board" tabindex="-1">
+        <div id="kanbanBoard" class="kanban-board" hidden aria-label="Work item board" data-i18n-attrs="aria-label" tabindex="-1">
             <div class="kanban-column" data-state="NEW" aria-label="New work items">
                 <div class="column-header new-header">
                     <span class="column-title">New</span>
@@ -136,18 +137,18 @@
         <div class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="drawerTitle" tabindex="-1">
             <div class="drawer-header">
                 <div class="drawer-heading">
-                    <h2 id="drawerTitle">Work Item</h2>
+                    <h2 id="drawerTitle">Work item</h2>
                     <a id="drawerSubtitle" class="drawer-subtitle" href="#" target="_blank" rel="noopener noreferrer" hidden></a>
                 </div>
-                <nimble-button id="drawerCloseBtn" appearance="ghost" content-hidden aria-label="Cancel" title="Cancel">
+                <nimble-button id="drawerCloseBtn" appearance="ghost" content-hidden aria-label="Cancel" title="Cancel" data-i18n data-i18n-attrs="aria-label title">
                     <nimble-icon-times slot="start"></nimble-icon-times>
                     Cancel
                 </nimble-button>
             </div>
             <div class="drawer-body" id="drawerBody"></div>
             <div class="drawer-footer">
-                <nimble-button id="drawerCancelBtn" appearance="ghost">Cancel</nimble-button>
-                <nimble-button id="drawerSaveBtn" appearance="outline">Save</nimble-button>
+                <nimble-button id="drawerCancelBtn" appearance="ghost" data-i18n>Cancel</nimble-button>
+                <nimble-button id="drawerSaveBtn" appearance="outline" data-i18n>Save</nimble-button>
             </div>
         </div>
     </div>
