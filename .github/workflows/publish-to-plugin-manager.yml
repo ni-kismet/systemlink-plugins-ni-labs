@@ -119,19 +119,93 @@ jobs:
           echo "nipkg_name=$(basename "$NIPKG_PATH")" >> "$GITHUB_OUTPUT"
 
       - name: Create or update release
+        id: release_assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RELEASE_TAG: ${{ matrix.tag }}
+          SOURCE_COMMIT: ${{ github.event.inputs.source_commit || '' }}
+          EXPECTED_NIPKG_NAME: ${{ steps.artifacts.outputs.nipkg_name }}
         working-directory: ${{ matrix.path }}
         run: |
-          RELEASE_ASSETS="$RUNNER_TEMP/release-assets"
-          if gh release view "${{ matrix.tag }}" --json assets --jq '.assets[].name' > "$RELEASE_ASSETS"; then
-            for asset in "${{ steps.artifacts.outputs.nipkg_path }}" sbom/*.cyclonedx.json sbom/*.spdx.json; do
+          set -euo pipefail
+          if RELEASE_JSON=$(gh release view "$RELEASE_TAG" --json assets); then
+            NIPKG_COUNT=$(jq \
+              '[.assets[] | select(.name | test("[.]nipkg$"))] | length' \
+              <<<"$RELEASE_JSON")
+            CYCLONEDX_COUNT=$(jq \
+              '[.assets[]
+                | select(.name | test("[.]cyclonedx[.]json$"))] | length' \
+              <<<"$RELEASE_JSON")
+            SPDX_COUNT=$(jq \
+              '[.assets[] | select(.name | test("[.]spdx[.]json$"))] | length' \
+              <<<"$RELEASE_JSON")
+            if [ "$NIPKG_COUNT" -ne 1 ] ||
+              [ "$CYCLONEDX_COUNT" -ne 1 ] ||
+              [ "$SPDX_COUNT" -ne 1 ]; then
+              printf 'Existing release must contain exactly one .nipkg, one CycloneDX SBOM,\n' \
+                >&2
+              printf 'and one SPDX SBOM; found %s, %s, and %s.\n' \
+                "$NIPKG_COUNT" "$CYCLONEDX_COUNT" "$SPDX_COUNT" >&2
+              exit 1
+            fi
+
+            RELEASE_NIPKG_NAME=$(jq -r \
+              '[.assets[] | select(.name | test("[.]nipkg$")) | .name][0]' \
+              <<<"$RELEASE_JSON")
+            if [ "$RELEASE_NIPKG_NAME" != "$EXPECTED_NIPKG_NAME" ]; then
+              printf 'Existing release is missing required package asset: %s\n' \
+                "$EXPECTED_NIPKG_NAME" >&2
+              exit 1
+            fi
+
+            for asset in sbom/*.cyclonedx.json sbom/*.spdx.json; do
               asset_name=$(basename "$asset")
-              if ! grep -Fqx "$asset_name" "$RELEASE_ASSETS"; then
-                echo "Existing release is missing required asset: $asset_name" >&2
+              if ! jq -e --arg name "$asset_name" \
+                '.assets | any(.name == $name)' \
+                <<<"$RELEASE_JSON" >/dev/null; then
+                printf 'Existing release is missing required asset: %s\n' \
+                  "$asset_name" >&2
                 exit 1
               fi
             done
+
+            DOWNLOAD_DIR="$RUNNER_TEMP/released-nipkg"
+            mkdir -p "$DOWNLOAD_DIR"
+            gh release download "$RELEASE_TAG" \
+              --pattern "$RELEASE_NIPKG_NAME" \
+              --dir "$DOWNLOAD_DIR"
+            ARTIFACT_PATH="$DOWNLOAD_DIR/$RELEASE_NIPKG_NAME"
+            if [ ! -f "$ARTIFACT_PATH" ]; then
+              printf 'Released package asset was not downloaded: %s\n' \
+                "$RELEASE_NIPKG_NAME" >&2
+              exit 1
+            fi
+
+            if [ -n "$SOURCE_COMMIT" ] &&
+              [[ ! "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
+              echo 'source_commit must be a 40-character lowercase commit SHA.' \
+                >&2
+              exit 1
+            fi
+            MANIFEST=$(jq -n \
+              --arg nipkg_file "$RELEASE_NIPKG_NAME" \
+              --arg sha256 "$(sha256sum "$ARTIFACT_PATH" | awk '{print $1}')" \
+              --arg source_repo "$GITHUB_REPOSITORY" \
+              --arg release_tag "$RELEASE_TAG" \
+              --arg source_commit "$SOURCE_COMMIT" \
+              '{
+                schemaVersion: 2,
+                nipkgFile: $nipkg_file,
+                sha256: $sha256,
+                sourceRepo: $source_repo,
+                releaseTag: $release_tag
+              } |
+              if $source_commit == "" then .
+              else . + {sourceCommit: $source_commit}
+              end')
+            printf '%s\n' "$MANIFEST" > submission-manifest.json
+            ARTIFACT_NAME=$RELEASE_NIPKG_NAME
           else
             RELEASE_FILES=("${{ steps.artifacts.outputs.nipkg_path }}" sbom/*.cyclonedx.json sbom/*.spdx.json)
             for icon in icon.svg icon.png; do
@@ -144,14 +218,16 @@ jobs:
               --title "${{ matrix.displayName }} v${{ matrix.version }}" \
               --notes "Release of ${{ matrix.displayName }} v${{ matrix.version }}" \
               --latest=false
+            ARTIFACT_NAME="${{ steps.artifacts.outputs.nipkg_name }}"
           fi
+          echo "artifact_name=$ARTIFACT_NAME" >> "$GITHUB_OUTPUT"
 
       - name: Submit to Plugin Manager
         env:
           PLUGIN_MANAGER_TOKEN: ${{ secrets.PLUGIN_MANAGER_DISPATCH_TOKEN }}
           SOURCE_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ matrix.tag }}
-          ARTIFACT_NAME: ${{ steps.artifacts.outputs.nipkg_name }}
+          ARTIFACT_NAME: ${{ steps.release_assets.outputs.artifact_name }}
         working-directory: ${{ matrix.path }}
         run: |
           MANIFEST=$(cat submission-manifest.json)
