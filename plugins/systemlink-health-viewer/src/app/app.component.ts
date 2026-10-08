@@ -1,9 +1,10 @@
-import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, inject, LOCALE_ID, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { EndpointHealth, HealthConfigurationError, SystemLinkService } from './systemlink.service';
 import { AppModule } from './app.module';
+import { NOT_AVAILABLE } from './display-text';
 
 type StatusFilter = 'all' | 'functional' | 'failed' | 'unauthorized';
 
@@ -61,13 +62,22 @@ export class AppComponent implements OnInit, OnDestroy {
   tableRows: HealthRow[] = [];
   loading = false;
   error: string | null = null;
-  errorTitle = 'Connection error';
+  errorTitle = $localize`Connection error`;
   searchTerm = '';
   statusFilter: StatusFilter = 'all';
   lastUpdated: Date | null = null;
   selectedOutput: EndpointHealth | null = null;
+  readonly notAvailable = NOT_AVAILABLE;
 
   @ViewChild('outputDialog') outputDialog?: ElementRef<NimbleDialogElement>;
+
+  private readonly locale = inject(LOCALE_ID);
+  private readonly millisecondFormat = new Intl.NumberFormat(this.locale, {
+    style: 'unit',
+    unit: 'millisecond',
+    unitDisplay: 'short'
+  });
+  private readonly percentFormat = new Intl.NumberFormat(this.locale, { style: 'percent' });
 
   private tableElement?: NimbleTableElement;
   private readonly rowsById = new Map<string, EndpointHealth>();
@@ -166,6 +176,22 @@ export class AppComponent implements OnInit, OnDestroy {
     }
 
     return Math.round(measured.reduce((sum, value) => sum + value, 0) / measured.length);
+  }
+
+  get availabilityDisplay(): string {
+    return this.percentFormat.format(this.availabilityPercent / 100);
+  }
+
+  get averageLatencyDisplay(): string {
+    return this.formatLatency(this.averageLatencyMs);
+  }
+
+  get refreshTitle(): string {
+    return this.loading ? $localize`Refreshing` : $localize`Refresh service health`;
+  }
+
+  formatLatency(latencyMs: number | null): string {
+    return latencyMs !== null ? this.millisecondFormat.format(latencyMs) : NOT_AVAILABLE;
   }
 
   trackByEndpoint(index: number, item: EndpointHealth): string {
@@ -315,13 +341,13 @@ export class AppComponent implements OnInit, OnDestroy {
         statusKey: item.authRestricted ? 'unauthorized' : item.functional ? 'functional' : 'failed',
         serviceDisplay: serviceName,
         service: this.getTestNameDisplayForHealth(item),
-        commandDisplay: item.endpoint === 'N/A' ? 'N/A' : item.method,
+        commandDisplay: item.endpoint === 'N/A' ? NOT_AVAILABLE : item.method,
         endpoint: item.endpoint,
-        registryStateDisplay: item.registryState ?? 'N/A',
+        registryStateDisplay: item.registryState ?? NOT_AVAILABLE,
         latencyMs: item.latencyMs,
-        latencyDisplay: item.latencyMs !== null ? `${item.latencyMs} ms` : 'N/A',
+        latencyDisplay: this.formatLatency(item.latencyMs),
         responseCode: item.responseCode,
-        responseDisplay: item.responseCode !== null ? String(item.responseCode) : 'N/A',
+        responseDisplay: item.responseCode !== null ? String(item.responseCode) : NOT_AVAILABLE,
         detailsAvailable: true
       };
     });
@@ -385,13 +411,13 @@ export class AppComponent implements OnInit, OnDestroy {
   private showError(error: unknown): void {
     console.error(error);
     if (error instanceof HealthConfigurationError) {
-      this.errorTitle = 'Configuration error';
+      this.errorTitle = $localize`Configuration error`;
       this.error = error.message;
       return;
     }
 
-    this.errorTitle = 'Connection error';
-    this.error = 'Unable to connect to SystemLink API. Please check the API URL and credentials.';
+    this.errorTitle = $localize`Connection error`;
+    this.error = $localize`Unable to connect to SystemLink API. Please check the API URL and credentials.`;
   }
 
   private getMappedServiceName(item: EndpointHealth): string {

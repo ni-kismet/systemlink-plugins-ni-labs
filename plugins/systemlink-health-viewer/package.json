@@ -1,6 +1,6 @@
 {
   "name": "systemlink-health-viewer",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "license": "MIT",
   "scripts": {
@@ -10,6 +10,7 @@
     "package": "npm run clean && npm run build && node ../../scripts/build-plugin-package.mjs . && node ../../scripts/verify-plugin-package.mjs .",
     "submission-manifest": "npm run package && node ../../scripts/create-submission-manifest.mjs .",
     "test": "ng test --watch=false",
+    "i18n": "ng extract-i18n --format json --output-path src/locale && node scripts/i18n-sync.mjs",
     "publish:demo": "powershell -ExecutionPolicy Bypass -File ./scripts/publish-demo.ps1"
   },
   "dependencies": {

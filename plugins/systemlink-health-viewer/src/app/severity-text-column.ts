@@ -6,6 +6,7 @@ import { template as cellTemplate } from '@ni/nimble-components/dist/esm/table-c
 import { styles as cellBaseStyles } from '@ni/nimble-components/dist/esm/table-column/text-base/cell-view/styles';
 import { template as columnTemplate } from '@ni/nimble-components/dist/esm/table-column/base/template';
 import { styles as columnStyles } from '@ni/nimble-components/dist/esm/table-column/base/styles';
+import { NOT_AVAILABLE } from './display-text';
 
 const severityCellViewTag = 'app-severity-text-cell-view';
 
@@ -40,7 +41,7 @@ class SeverityTextCellView extends TableColumnTextCellView {
       severity = 'success';
     } else if (value === '401' || value === '403') {
       severity = 'muted';
-    } else if (value !== '' && value !== 'N/A') {
+    } else if (value !== '' && value !== NOT_AVAILABLE.toUpperCase()) {
       severity = 'error';
     }
     this.setAttribute('severity', severity);

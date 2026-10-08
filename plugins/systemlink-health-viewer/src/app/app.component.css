@@ -96,8 +96,7 @@ ok-fv-summary-panel-tile[data-filter='functional'] {
   --ni-nimble-title-plus-2-font-color: var(--status-pass-color);
 }
 
-ok-fv-summary-panel-tile[data-filter='failed'],
-ok-fv-summary-panel-tile[data-filter='unauthorized'] {
+ok-fv-summary-panel-tile[data-filter='failed'] {
   --ni-nimble-title-plus-2-font-color: var(--status-fail-color);
 }
 

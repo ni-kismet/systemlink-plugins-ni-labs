@@ -15,7 +15,8 @@
     "declaration": false,
     "noEmit": true,
     "isolatedModules": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true
   },
   "angularCompilerOptions": {
     "strictTemplates": true

@@ -17,6 +17,9 @@ Nimble components.
 - **Search and status filters** — quickly narrow the list by name or health status
 - **Endpoint output details modal** — inspect the full response for any check
 - **Theme sync** — automatically follows the SystemLink light/dark theme
+- **Localization** — follows the SystemLink UI language (English, German, French,
+  Japanese, Chinese), reusing SystemLink's own translations where available; dates,
+  numbers, and latency values use the selected language's formatting
 - **Same-origin, read-only** — resolves endpoints relative to the hosting webapp; no
   data is modified
 
