@@ -128,25 +128,23 @@ jobs:
             for asset in "${{ steps.artifacts.outputs.nipkg_path }}" sbom/*.cyclonedx.json sbom/*.spdx.json; do
               asset_name=$(basename "$asset")
               if ! grep -Fqx "$asset_name" "$RELEASE_ASSETS"; then
-                gh release upload "${{ matrix.tag }}" "$asset"
-                echo "$asset_name" >> "$RELEASE_ASSETS"
+                echo "Existing release is missing required asset: $asset_name" >&2
+                exit 1
               fi
             done
           else
+            RELEASE_FILES=("${{ steps.artifacts.outputs.nipkg_path }}" sbom/*.cyclonedx.json sbom/*.spdx.json)
+            for icon in icon.svg icon.png; do
+              if [ -f "$icon" ]; then
+                RELEASE_FILES+=("$icon")
+              fi
+            done
             gh release create "${{ matrix.tag }}" \
-              "${{ steps.artifacts.outputs.nipkg_path }}" \
-              sbom/*.cyclonedx.json sbom/*.spdx.json \
+              "${RELEASE_FILES[@]}" \
               --title "${{ matrix.displayName }} v${{ matrix.version }}" \
               --notes "Release of ${{ matrix.displayName }} v${{ matrix.version }}" \
               --latest=false
-            gh release view "${{ matrix.tag }}" --json assets --jq '.assets[].name' > "$RELEASE_ASSETS"
           fi
-
-          for icon in icon.svg icon.png; do
-            if [ -f "$icon" ] && ! grep -Fqx "$icon" "$RELEASE_ASSETS"; then
-              gh release upload "${{ matrix.tag }}" "$icon"
-            fi
-          done
 
       - name: Submit to Plugin Manager
         env:
