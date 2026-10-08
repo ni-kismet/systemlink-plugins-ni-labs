@@ -8,6 +8,8 @@
  * server enables the in-browser mock in demo-api.js instead.
  * ========================================================================= */
 
+const { t, tn } = I18N;
+
 const FILE_API = '/nifile/v1';
 const SERVER_PAGE = 1000;   // files fetched per server request (API max)
 const AUTO_REFRESH_MS = 30000;   // file-table auto-refresh interval (ms); 0 disables
@@ -94,8 +96,8 @@ async function apiGet(path, opts = {}) {
   });
   if (!res.ok) {
     const msg = res.status === 401 || res.status === 403
-      ? 'Not authorized. Open this app from within SystemLink so your session is used.'
-      : `Request failed (${res.status} ${res.statusText}).`;
+      ? t('Not authorized. Open this app from within SystemLink so your session is used.')
+      : t('Request failed ({status} {statusText}).', { status: String(res.status), statusText: res.statusText });
     throw new Error(msg);
   }
   return res;
@@ -165,7 +167,7 @@ async function loadFiles() {
     return;
   }
   state.loading = true;
-  setFileStatus(state.search ? 'Searching…' : 'Loading files…');
+  setFileStatus(state.search ? t('Searching…') : t('Loading files…'));
   try {
     let files;
     let truncated = false;
@@ -300,7 +302,10 @@ function wireDateFilter() {
     mount: '#date-range-mount',
     defaultValue: DEFAULT_TIME,
     nimble: true,
-    label: 'Filter by creation time',
+    label: t('Filter by creation time'),
+    locale: I18N.lang,
+    presets: Object.fromEntries(Object.entries(TimeRangeControl.DEFAULT_PRESETS).map(([key, label]) => [key, t(label)])),
+    labels: Object.fromEntries(Object.entries(TimeRangeControl.DEFAULT_LABELS).map(([key, label]) => [key, t(label)])),
     onChange: () => loadFiles(),
   });
 }
@@ -312,14 +317,14 @@ function renderFileTable() {
   const files = state.files || [];
   const empty = $('#file-empty');
   if (files.length === 0) {
-    setFileStatus(state.search ? 'No XML files match your search.' : 'No XML files found.');
+    setFileStatus(state.search ? t('No XML files match your search.') : t('No XML files found.'));
     if (empty) empty.hidden = false;
   } else {
     const n = files.length;
     if (state.serverTruncated && n === state.allFiles.length) {
-      setFileStatus(`Showing ${n} most recent files`);
+      setFileStatus(t('Showing {count} most recent files', { count: n }));
     } else {
-      setFileStatus(`Showing ${n} file${n === 1 ? '' : 's'}`);
+      setFileStatus(tn('Showing {count} file', 'Showing {count} files', n));
     }
     if (empty) empty.hidden = true;
   }
@@ -346,17 +351,10 @@ function setFileStatus(msg, isError) {
   s.style.color = isError ? 'var(--fail)' : '';
 }
 function formatSize(bytes) {
-  if (bytes == null) return '—';
-  const n = Number(bytes);
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  return `${(n / 1024 / 1024).toFixed(1)} MB`;
+  return I18N.formatBytes(bytes);
 }
 function formatDate(iso) {
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (isNaN(d)) return '';
-  return d.toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  return I18N.formatDateTime(iso);
 }
 
 /* ---------- Load & render a file ---------- */
@@ -432,10 +430,10 @@ function openXml(text, name, id, file) {
 
   if (parseError) {
     state.currentFormat = 'xml';
-    setFormatBadge('Invalid XML', false);
+    setFormatBadge(t('Invalid XML'), false);
     body.appendChild(el('div', {
       class: 'error-box',
-      text: 'This file is not valid XML and cannot be parsed. Use the Raw XML view to inspect its contents.',
+      text: t('This file is not valid XML and cannot be parsed. Use the Raw XML view to inspect its contents.'),
     }));
     setView('rendered');
     return;
@@ -450,7 +448,7 @@ function openXml(text, name, id, file) {
     setFormatBadge('XML', false);
     body.appendChild(el('div', {
       class: 'viewer-banner warn',
-      text: 'This file is not in a recognized ATML (IEEE 1671/1636) test-results format. The raw XML structure is shown below, and importing it as a Test Monitor result is not supported.',
+      text: t('This file is not in a recognized ATML (IEEE 1671/1636) test-results format. The raw XML structure is shown below, and importing it as a Test Monitor result is not supported.'),
     }));
     renderGenericXml(doc, body);
   }
@@ -474,7 +472,7 @@ function showViewerError(name, msg) {
   showViewerPage();
   $('#viewer').hidden = false;
   $('#viewer-filename').textContent = name;
-  setFormatBadge('Error', false);
+  setFormatBadge(t('Error'), false);
   const body = $('#viewer-body');
   body.innerHTML = '';
   body.appendChild(el('div', { class: 'error-box', text: msg }));
@@ -509,11 +507,11 @@ async function deleteCurrentFile() {
   const file = state.currentFile;
   if (!file || !file.id) return;
   if (!can(PERM.deleteFile, file.workspace)) {
-    alert('You do not have permission to delete this file.');
+    alert(t('You do not have permission to delete this file.'));
     return;
   }
   const name = fileName(file);
-  if (!window.confirm(`Delete "${name}"?`)) return;
+  if (!window.confirm(t('Delete "{name}"?', { name }))) return;
   const button = $('#delete-btn');
   if (button) button.disabled = true;
   try {
@@ -617,7 +615,7 @@ function renderAtml(doc, container) {
   const results = firstByLocal(doc, 'TestResults') || doc.documentElement;
   const resultSets = resultSetsFor(doc);
   if (!resultSets.length) {
-    container.appendChild(el('div', { class: 'error-box', text: 'ATML file recognized but no ResultSet was found.' }));
+    container.appendChild(el('div', { class: 'error-box', text: t('ATML file recognized but no ResultSet was found.') }));
     return;
   }
 
@@ -646,16 +644,16 @@ function renderAtml(doc, container) {
   // File metadata / properties first.
   const file = state.currentFile;
   if (file) {
-    header.appendChild(el('div', { class: 'rh-group-title', text: 'File Details' }));
+    header.appendChild(el('div', { class: 'rh-group-title', text: t('File Details') }));
     const ff = el('div', { class: 'rh-fields', attrs: { id: 'rh-file-fields' } });
-    addField(ff, 'Size', formatSize(file.size ?? file.size64));
-    addField(ff, 'Created', formatDate(file.created) || '--');
-    addField(ff, 'Updated', formatDate(file.updated) || '--');
-    addField(ff, 'Workspace', state.workspaceNames[file.workspace] || file.workspace || '--');
+    addField(ff, t('Size'), formatSize(file.size ?? file.size64));
+    addField(ff, t('Created'), formatDate(file.created) || '--');
+    addField(ff, t('Updated'), formatDate(file.updated) || '--');
+    addField(ff, t('Workspace'), state.workspaceNames[file.workspace] || file.workspace || '--');
     if (file.id) {
-      addFieldLink(ff, 'File ID', file.id, `/files/file/${encodeURIComponent(file.id)}/preview`);
+      addFieldLink(ff, t('File ID'), file.id, `/files/file/${encodeURIComponent(file.id)}/preview`);
     } else {
-      addField(ff, 'File ID', '--');
+      addField(ff, t('File ID'), '--');
     }
     const props = file.properties || {};
     for (const k of Object.keys(props)) {
@@ -670,33 +668,33 @@ function renderAtml(doc, container) {
   }
 
   // ATML test-result metadata.
-  header.appendChild(el('div', { class: 'rh-group-title', text: 'Test Result' }));
+  header.appendChild(el('div', { class: 'rh-group-title', text: t('Test Result') }));
   const fields = el('div', { class: 'rh-fields' });
-  addField(fields, resultSets.length === 1 ? 'Test program' : 'Test programs', rsNames.map(prettySequenceName).join(', '));
+  addField(fields, resultSets.length === 1 ? t('Test program') : t('Test programs'), rsNames.map(prettySequenceName).join(', '));
   const statusVal = el('span', { class: 'rh-status ' + outcomeClass(overall) });
   statusVal.appendChild(statusIcon(overall));
-  statusVal.appendChild(el('span', { class: 'rh-status-text', text: overall || 'Unknown' }));
-  addFieldNode(fields, 'Status', statusVal);
-  addField(fields, 'Serial number', uut || '--');
-  addField(fields, 'Started', formatDate(start) || '--');
-  addField(fields, 'Elapsed time', durationBetween(start, end));
-  addField(fields, 'System', station || '--');
-  addField(fields, 'Operator', operator || '--');
+  statusVal.appendChild(el('span', { class: 'rh-status-text', text: statusLabel(overall) }));
+  addFieldNode(fields, t('Status'), statusVal);
+  addField(fields, t('Serial number'), uut || '--');
+  addField(fields, t('Started'), formatDate(start) || '--');
+  addField(fields, t('Elapsed time'), durationBetween(start, end));
+  addField(fields, t('System'), station || '--');
+  addField(fields, t('Operator'), operator || '--');
   header.appendChild(fields);
   container.appendChild(header);
 
   // Centered handle on the panel's bottom edge: up arrow collapses the details,
   // down arrow expands them (giving the step data more room).
   const collapseBar = el('div', { class: 'rh-collapse-bar' });
-  const handle = el('nimble-button', { class: 'rh-handle', attrs: { appearance: 'ghost', 'content-hidden': '', 'aria-expanded': 'true', 'aria-label': 'Collapse details', title: 'Collapse details' } });
+  const handle = el('nimble-button', { class: 'rh-handle', attrs: { appearance: 'ghost', 'content-hidden': '', 'aria-expanded': 'true', 'aria-label': t('Collapse details'), title: t('Collapse details') } });
   const collapseIcon = el('nimble-icon-arrow-expander-up', { attrs: { slot: 'start', 'aria-hidden': 'true' } });
   const expandIcon = el('nimble-icon-arrow-expander-down', { attrs: { slot: 'start', 'aria-hidden': 'true', hidden: '' } });
   handle.append(collapseIcon, expandIcon);
   handle.addEventListener('click', () => {
     const collapsed = header.classList.toggle('is-collapsed');
     handle.setAttribute('aria-expanded', String(!collapsed));
-    handle.title = collapsed ? 'Show details' : 'Collapse details';
-    handle.setAttribute('aria-label', collapsed ? 'Show details' : 'Collapse details');
+    handle.title = collapsed ? t('Show details') : t('Collapse details');
+    handle.setAttribute('aria-label', handle.title);
     collapseIcon.hidden = collapsed;
     expandIcon.hidden = !collapsed;
   });
@@ -706,17 +704,17 @@ function renderAtml(doc, container) {
   // ----- summary cards (also act as step filters) -----
   const cardsWrap = el('div', { class: 'summary-cards' });
   const cardDefs = [
-    { mode: 'all', label: 'Total steps', value: stats.total, cls: '' },
-    { mode: 'passed', label: 'Passed', value: stats.passed, cls: 'pass' },
-    { mode: 'failed', label: 'Failed', value: stats.failed, cls: 'fail' },
+    { mode: 'all', label: t('Total steps'), title: t('Show all steps'), value: stats.total, cls: '' },
+    { mode: 'passed', label: t('Passed'), title: t('Show passed steps'), value: stats.passed, cls: 'pass' },
+    { mode: 'failed', label: t('Failed'), title: t('Show failed steps'), value: stats.failed, cls: 'fail' },
   ];
   const cardEls = [];
   for (const def of cardDefs) {
-    const card = el('button', { class: 'summary-card-btn ' + def.cls, attrs: { type: 'button', title: `Show ${def.label.toLowerCase()}` } });
+    const card = el('button', { class: 'summary-card-btn ' + def.cls, attrs: { type: 'button', title: def.title } });
     card.dataset.mode = def.mode;
     if (def.mode === state.currentFilterMode) card.classList.add('active');
     card.appendChild(el('span', { class: 'sc-label', text: def.label }));
-    card.appendChild(el('span', { class: 'sc-value', text: String(def.value) }));
+    card.appendChild(el('span', { class: 'sc-value', text: I18N.formatNumber(def.value) }));
     card.addEventListener('click', () => setFilterMode(def.mode));
     cardEls.push(card);
     cardsWrap.appendChild(card);
@@ -739,9 +737,9 @@ function renderAtml(doc, container) {
   // ----- toolbar (compact summary cards + step search) -----
   const toolbar = el('div', { class: 'steps-toolbar' });
   const tools = el('div', { class: 'steps-tools' });
-  const searchInput = el('nimble-text-field', { attrs: { placeholder: 'Search steps…', 'aria-label': 'Search steps', autocomplete: 'off', spellcheck: 'false' } });
+  const searchInput = el('nimble-text-field', { attrs: { placeholder: t('Search steps…'), 'aria-label': t('Search steps'), autocomplete: 'off', spellcheck: 'false' } });
   searchInput.appendChild(el('nimble-icon-magnifying-glass', { attrs: { slot: 'start' } }));
-  const searchClear = el('nimble-button', { text: 'Clear', attrs: { slot: 'actions', appearance: 'ghost', 'content-hidden': '', title: 'Clear search', 'aria-label': 'Clear search', style: 'display:none' } });
+  const searchClear = el('nimble-button', { text: t('Clear'), attrs: { slot: 'actions', appearance: 'ghost', 'content-hidden': '', title: t('Clear search'), 'aria-label': t('Clear search'), style: 'display:none' } });
   searchClear.appendChild(el('nimble-icon-times', { attrs: { slot: 'start' } }));
   searchInput.appendChild(searchClear);
   disableSuggestions(searchInput);
@@ -761,19 +759,19 @@ function renderAtml(doc, container) {
   const table = el('table', { class: 'steps-table' });
   const thead = el('thead');
   const htr = el('tr');
-  ['Steps', 'Status', 'Elapsed time', 'Measurement name', 'Value', 'Unit'].forEach((h) => htr.appendChild(el('th', { text: h })));
+  [t('Steps'), t('Status'), t('Elapsed time'), t('Measurement name'), t('Value'), t('Unit')].forEach((h) => htr.appendChild(el('th', { text: h })));
   thead.appendChild(htr);
   table.appendChild(thead);
   const tbody = el('tbody');
   table.appendChild(tbody);
   tableWrap.appendChild(table);
-  const noRes = el('div', { class: 'no-results', text: 'No steps match your filter.' });
+  const noRes = el('div', { class: 'no-results', text: t('No steps match your filter.') });
   noRes.hidden = true;
   tableWrap.appendChild(noRes);
   const pager = el('div', { class: 'steps-pager' });
-  const previousPage = el('nimble-button', { class: 'steps-page-btn', attrs: { type: 'button', appearance: 'ghost' }, text: 'Previous' });
+  const previousPage = el('nimble-button', { class: 'steps-page-btn', attrs: { type: 'button', appearance: 'ghost' }, text: t('Previous') });
   const pageLabel = el('span', { class: 'steps-page-label' });
-  const nextPage = el('nimble-button', { class: 'steps-page-btn', attrs: { type: 'button', appearance: 'ghost' }, text: 'Next' });
+  const nextPage = el('nimble-button', { class: 'steps-page-btn', attrs: { type: 'button', appearance: 'ghost' }, text: t('Next') });
   pager.append(previousPage, pageLabel, nextPage);
   tableWrap.appendChild(pager);
   container.appendChild(tableWrap);
@@ -802,8 +800,8 @@ function renderAtml(doc, container) {
     previousPage.disabled = currentPage === 0 || visibleRows.length === 0;
     nextPage.disabled = currentPage >= pageCount - 1 || visibleRows.length === 0;
     pageLabel.textContent = visibleRows.length
-      ? `Showing ${start + 1}-${Math.min(start + STEP_PAGE_SIZE, visibleRows.length)} of ${visibleRows.length}`
-      : 'No steps';
+      ? t('Showing {start}-{end} of {total}', { start: start + 1, end: Math.min(start + STEP_PAGE_SIZE, visibleRows.length), total: visibleRows.length })
+      : t('No steps');
   }
   previousPage.addEventListener('click', () => { currentPage--; renderPage(); });
   nextPage.addEventListener('click', () => { currentPage++; renderPage(); });
@@ -1050,7 +1048,7 @@ function parseArrayDimensions(value) {
 function arrayShape(array) {
   const dims = array.declaredDims && array.declaredDims.length ? array.declaredDims : array.dims;
   const shape = dims && dims.length ? dims.join(' × ') : String(array.points.length);
-  return array.dimensionsValid === false ? `${shape} (display limited)` : shape;
+  return array.dimensionsValid === false ? t('{shape} (display limited)', { shape }) : shape;
 }
 
 // Parse <tr:Parameters>/<tr:Parameter> into step inputs and outputs.
@@ -1195,7 +1193,7 @@ function renderStepsRow(row, onToggle, isCollapsed = false) {
   const c1 = el('td', { class: 'st-cell st-name-cell' });
   c1.style.paddingLeft = `${10 + row.depth * 22}px`;
   const chev = row.kind === 'step' && row.expandable
-    ? el('button', { class: 'st-chev', attrs: { type: 'button', 'aria-expanded': String(!isCollapsed), 'aria-label': isCollapsed ? 'Expand step' : 'Collapse step', title: isCollapsed ? 'Expand step' : 'Collapse step' } })
+    ? el('button', { class: 'st-chev', attrs: { type: 'button', 'aria-expanded': String(!isCollapsed), 'aria-label': isCollapsed ? t('Expand step') : t('Collapse step'), title: isCollapsed ? t('Expand step') : t('Collapse step') } })
     : el('span', { class: 'st-chev' });
   if (row.kind === 'step' && row.expandable) {
     chev.appendChild(el('nimble-icon-arrow-expander-down'));
@@ -1205,7 +1203,7 @@ function renderStepsRow(row, onToggle, isCollapsed = false) {
   }
   c1.appendChild(chev);
   if (row.kind === 'step') {
-    const nameEl = el('button', { class: 'st-name st-name-link', text: row.name, attrs: { type: 'button', title: 'View step details' } });
+    const nameEl = el('button', { class: 'st-name st-name-link', text: row.name, attrs: { type: 'button', title: t('View step details') } });
     nameEl.addEventListener('click', () => openStepDetails(row.node));
     c1.appendChild(nameEl);
   }
@@ -1246,7 +1244,7 @@ function renderStepsRow(row, onToggle, isCollapsed = false) {
     munit.textContent = m.unit || '';
     if (m.limits && m.limits.text) {
       mval.classList.add('has-limits');
-      mval.title = `Limits: ${m.limits.text}`;
+      mval.title = t('Limits: {limits}', { limits: m.limits.text });
     }
   }
   tr.appendChild(mname);
@@ -1308,7 +1306,7 @@ function setupResizableColumns(table) {
   const ths = table.querySelectorAll('thead th');
   ths.forEach((th, i) => {
     if (i >= ths.length - 1) return; // last column has no right handle
-    const handle = el('span', { class: 'col-resize-handle', attrs: { title: 'Drag to resize' } });
+    const handle = el('span', { class: 'col-resize-handle', attrs: { title: t('Drag to resize') } });
     th.appendChild(handle);
     handle.addEventListener('mousedown', (e) => {
       e.preventDefault(); e.stopPropagation();
@@ -1349,7 +1347,7 @@ function renderArrayPreview(td, array, name) {
   const preview = array.points.slice(0, 5).map((p) => p.value).join(', ');
   const more = array.points.length > 5 || array.truncated ? ', …' : '';
   const link = el('button', {
-    class: 'array-link', attrs: { type: 'button', title: 'View full array' },
+    class: 'array-link', attrs: { type: 'button', title: t('View full array') },
     text: `[${preview}${more}] (${shape})`,
   });
   link.addEventListener('click', (e) => { e.stopPropagation(); openArrayDialog(array, name, e.currentTarget); });
@@ -1363,17 +1361,17 @@ function openArrayDialog(array, name, trigger) {
     role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'array-dialog-title', tabindex: '-1',
   } });
   const head = el('div', { class: 'array-dialog-head' });
-  head.appendChild(el('h3', { attrs: { id: 'array-dialog-title' }, text: name || 'Array data' }));
+  head.appendChild(el('h3', { attrs: { id: 'array-dialog-title' }, text: name || t('Array data') }));
   head.appendChild(el('span', { class: 'array-dialog-shape', text: arrayShape(array) }));
-  const exportBtn = el('button', { class: 'array-dialog-export', attrs: { type: 'button', title: 'Export to CSV' }, text: 'Export CSV' });
+  const exportBtn = el('button', { class: 'array-dialog-export', attrs: { type: 'button', title: t('Export to CSV') }, text: t('Export CSV') });
   exportBtn.addEventListener('click', () => downloadCsv(`${sanitizeFileName(name || 'array-data')}.csv`, arrayToCsv(array)));
   head.appendChild(exportBtn);
-  const closeBtn = el('button', { class: 'array-dialog-close', attrs: { type: 'button', 'aria-label': 'Close' }, text: '×' });
+  const closeBtn = el('button', { class: 'array-dialog-close', attrs: { type: 'button', 'aria-label': t('Close') }, text: '×' });
   head.appendChild(closeBtn);
   dlg.appendChild(head);
   const body = el('div', { class: 'array-dialog-body' });
   if (array.dimensionsValid === false || array.truncated) {
-    body.appendChild(el('p', { class: 'array-limit-warning', text: 'Array display is limited to protect browser memory.' }));
+    body.appendChild(el('p', { class: 'array-limit-warning', text: t('Array display is limited to protect browser memory.') }));
   }
   body.appendChild(buildArrayTable(array));
   dlg.appendChild(body);
@@ -1409,7 +1407,7 @@ function buildArrayTable(array) {
     }
     const htr = el('tr');
     htr.appendChild(el('th', { text: '#' }));
-    for (let c = 0; c < cols; c++) htr.appendChild(el('th', { text: `Column ${c}` }));
+    for (let c = 0; c < cols; c++) htr.appendChild(el('th', { text: t('Column {index}', { index: String(c) }) }));
     thead.appendChild(htr);
     for (let rIdx = 0; rIdx < rows; rIdx++) {
       const tr = el('tr');
@@ -1418,7 +1416,10 @@ function buildArrayTable(array) {
       tbody.appendChild(tr);
     }
   } else {
-    thead.innerHTML = '<tr><th>Coordinates</th><th>Value</th></tr>';
+    const hr = el('tr');
+    hr.appendChild(el('th', { text: t('Coordinates') }));
+    hr.appendChild(el('th', { text: t('Value') }));
+    thead.appendChild(hr);
     points.slice(0, MAX_ARRAY_CELLS).forEach((p, i) => {
       const tr = el('tr');
       tr.appendChild(el('td', { class: 'array-idx', text: p.pos.length ? `[${p.pos.join(', ')}]` : String(i) }));
@@ -1475,8 +1476,8 @@ function downloadCsv(filename, text) {
 const DATA_URI_RE = /data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+/g;
 function appendDataImage(container, src, alt) {
   const img = el('img', { class: 'data-img', attrs: {
-    src, alt, loading: 'lazy', title: 'Click to enlarge', role: 'button', tabindex: '0',
-    'aria-label': `${alt}; activate to enlarge`,
+    src, alt, loading: 'lazy', title: t('Click to enlarge'), role: 'button', tabindex: '0',
+    'aria-label': t('{alt}; activate to enlarge', { alt }),
   } });
   const open = (event) => {
     event.stopPropagation();
@@ -1511,7 +1512,7 @@ function renderValueInto(td, value) {
   const s = value == null ? '' : String(value);
   const uris = s.match(DATA_URI_RE);
   if (uris && uris.length) {
-    appendValueParts(td, s, 'span', 'data-text', 'embedded image');
+    appendValueParts(td, s, 'span', 'data-text', t('embedded image'));
     td.classList.add('has-images');
   } else if (s.length > 200) {
     // Keep the DOM light for very long values; CSS clips to one row and the
@@ -1564,12 +1565,19 @@ function resolveOutcome(value, qualifier) {
 const STATUS_LABEL = {
   passed: 'Passed', failed: 'Failed', done: 'Done', skipped: 'Skipped',
   notstarted: 'Not started', error: 'Error', errored: 'Errored', terminated: 'Terminated',
+  running: 'Running', 'timed out': 'Timed out',
 };
+
+// Display label for an outcome; the raw value is kept for logic and API payloads.
+function statusLabel(outcome, qualifier) {
+  const label = STATUS_LABEL[resolveOutcome(outcome, qualifier)];
+  return label ? t(label) : (outcome || t('Unknown'));
+}
 
 function statusIcon(outcome, qualifier) {
   const v = resolveOutcome(outcome, qualifier);
   const span = el('span', { class: 'st-status ' + outcomeClass(v) });
-  span.title = STATUS_LABEL[v] || outcome || 'Unknown';
+  span.title = statusLabel(outcome, qualifier);
   let tag = null, severity = null;
   if (v === 'passed') { tag = 'nimble-icon-check'; severity = 'success'; }
   else if (v === 'failed') { tag = 'nimble-icon-times'; severity = 'error'; }
@@ -1678,11 +1686,11 @@ function durationBetween(start, end) {
 }
 function formatSeconds(s) {
   if (s == null || isNaN(s)) return '';
-  if (s < 1) return `${(s * 1000).toFixed(0)} ms`;
-  if (s < 60) return `${s.toFixed(2)} s`;
+  if (s < 1) return I18N.formatUnit(s * 1000, 'millisecond', 0);
+  if (s < 60) return I18N.formatUnit(s, 'second', 2);
   const m = Math.floor(s / 60);
-  const rem = (s % 60).toFixed(0);
-  return `${m}m ${rem}s`;
+  const rem = Math.round(s % 60);
+  return `${I18N.formatUnit(m, 'minute', 0)} ${I18N.formatUnit(rem, 'second', 0)}`;
 }
 
 /* ---------- Generic XML tree ---------- */
@@ -1715,7 +1723,7 @@ function renderXmlElement(node, depth) {
   const line = el('div', { class: 'xml-line' });
   const childrenId = hasElementChildren ? `xml-children-${++xmlElementId}` : null;
   const toggle = hasElementChildren
-    ? el('button', { class: 'xml-toggle', text: '▾', attrs: { type: 'button', 'aria-expanded': 'true', 'aria-controls': childrenId, 'aria-label': `Collapse ${node.nodeName}` } })
+    ? el('button', { class: 'xml-toggle', text: '▾', attrs: { type: 'button', 'aria-expanded': 'true', 'aria-controls': childrenId, 'aria-label': t('Collapse {name}', { name: node.nodeName }) } })
     : el('span', { class: 'xml-toggle placeholder' });
   line.appendChild(toggle);
 
@@ -1765,7 +1773,7 @@ function renderXmlElement(node, depth) {
         const collapsed = wrap.classList.toggle('collapsed');
         toggle.textContent = collapsed ? '▸' : '▾';
         toggle.setAttribute('aria-expanded', String(!collapsed));
-        toggle.setAttribute('aria-label', `${collapsed ? 'Expand' : 'Collapse'} ${node.nodeName}`);
+        toggle.setAttribute('aria-label', t(collapsed ? 'Expand {name}' : 'Collapse {name}', { name: node.nodeName }));
         closeLine.style.display = collapsed ? 'none' : '';
       };
       toggle.addEventListener('click', doToggle);
@@ -1865,17 +1873,17 @@ function openStepDetails(node) {
 
   const info = $('#drawer-info');
   info.innerHTML = '';
-  info.appendChild(drawerSection('Measurements', renderMeasurementsTable(node)));
+  info.appendChild(drawerSection(t('Measurements'), renderMeasurementsTable(node)));
   const inputs = node.inputs || [];
   const outputs = node.outputs || [];
-  info.appendChild(drawerSection('Inputs', inputs.length
-    ? renderParamsTable(inputs) : el('div', { class: 'drawer-empty', text: 'No inputs' })));
-  info.appendChild(drawerSection('Outputs', outputs.length
-    ? renderParamsTable(outputs) : el('div', { class: 'drawer-empty', text: 'No outputs' })));
+  info.appendChild(drawerSection(t('Inputs'), inputs.length
+    ? renderParamsTable(inputs) : el('div', { class: 'drawer-empty', text: t('No inputs') })));
+  info.appendChild(drawerSection(t('Outputs'), outputs.length
+    ? renderParamsTable(outputs) : el('div', { class: 'drawer-empty', text: t('No outputs') })));
   if (node.details && node.details.length) {
-    info.appendChild(drawerSection('Details', renderDetailsBlock(node.details)));
+    info.appendChild(drawerSection(t('Details'), renderDetailsBlock(node.details)));
   }
-  info.appendChild(drawerSection('Properties', renderPropertiesTable(node)));
+  info.appendChild(drawerSection(t('Properties'), renderPropertiesTable(node)));
 
   const data = $('#drawer-data');
   data.innerHTML = '';
@@ -1887,7 +1895,7 @@ function openStepDetails(node) {
     pre.appendChild(code);
     data.appendChild(pre);
   } else {
-    data.appendChild(el('div', { class: 'drawer-empty', text: 'No data' }));
+    data.appendChild(el('div', { class: 'drawer-empty', text: t('No data') }));
   }
 
   const drawer = $('#step-drawer');
@@ -1969,7 +1977,7 @@ function renderDetailsBlock(values) {
   const wrap = el('div', { class: 'drawer-details' });
   for (const v of values) {
     const s = v == null ? '' : String(v);
-    appendValueParts(wrap, s, 'pre', 'detail-text', 'report image');
+    appendValueParts(wrap, s, 'pre', 'detail-text', t('report image'));
   }
   return wrap;
 }
@@ -1985,6 +1993,11 @@ function drawerSection(title, contentEl) {
   sec.appendChild(body);
   return sec;
 }
+function headerRow(labels) {
+  const row = el('tr');
+  for (const label of labels) row.appendChild(el('th', { text: label }));
+  return row;
+}
 function renderMeasurementsTable(node) {
   // Every step shows at least its own pass/fail measurement (empty value).
   const meas = (node.measurements && node.measurements.length)
@@ -1992,7 +2005,8 @@ function renderMeasurementsTable(node) {
     : [{ name: node.name, value: '', unit: '', limits: null }];
   const table = el('table', { class: 'drawer-table' });
   const thead = el('thead');
-  thead.innerHTML = '<tr><th>Name</th><th>Value</th><th>Unit</th><th>Low Limit</th><th>High Limit</th><th>Comparison Type</th><th class="dt-status"></th></tr>';
+  thead.appendChild(headerRow([t('Name'), t('Value'), t('Unit'), t('Low Limit'), t('High Limit'), t('Comparison Type')]));
+  thead.firstChild.appendChild(el('th', { class: 'dt-status' }));
   table.appendChild(thead);
   const tb = el('tbody');
   for (const m of meas) {
@@ -2018,9 +2032,7 @@ function renderParamsTable(items) {
   const hasUnit = items.some((i) => i.unit);
   const table = el('table', { class: 'drawer-table' });
   const thead = el('thead');
-  thead.innerHTML = hasUnit
-    ? '<tr><th>Name</th><th>Value</th><th>Unit</th></tr>'
-    : '<tr><th>Name</th><th>Value</th></tr>';
+  thead.appendChild(headerRow(hasUnit ? [t('Name'), t('Value'), t('Unit')] : [t('Name'), t('Value')]));
   table.appendChild(thead);
   const tb = el('tbody');
   for (const it of items) {
@@ -2041,12 +2053,12 @@ function renderParamsTable(items) {
 }
 function renderPropertiesTable(node) {
   const props = [
-    ['Started at', formatDate(node.start) || '—'],
-    ['Ended at', formatDate(node.end) || '—'],
-    ['Status type', node.outcome || '—'],
-    ['Step type', node.stepType || '—'],
-    ['Total time', (node.time != null && !isNaN(node.time)) ? formatSeconds(node.time) : '—'],
-    ['ID', node.id || '—'],
+    [t('Started at'), formatDate(node.start) || '—'],
+    [t('Ended at'), formatDate(node.end) || '—'],
+    [t('Status type'), node.outcome || '—'],
+    [t('Step type'), node.stepType || '—'],
+    [t('Total time'), (node.time != null && !isNaN(node.time)) ? formatSeconds(node.time) : '—'],
+    [t('ID'), node.id || '—'],
   ];
   return keyValueTable(props);
 }
@@ -2056,7 +2068,7 @@ function renderDataTable(data) {
 function keyValueTable(rows) {
   const table = el('table', { class: 'drawer-table' });
   const thead = el('thead');
-  thead.innerHTML = '<tr><th>Name</th><th>Value</th></tr>';
+  thead.appendChild(headerRow([t('Name'), t('Value')]));
   table.appendChild(thead);
   const tb = el('tbody');
   for (const [k, v] of rows) {
@@ -2215,7 +2227,7 @@ function buildUploadRow(q) {
   tr.appendChild(timeTd);
   q._timeTd = timeTd;
   const actionTd = el('td', { class: 'ul-actions' });
-  const removeBtn = el('button', { class: 'ul-remove', attrs: { type: 'button', title: 'Remove from list', 'aria-label': 'Remove from list' } });
+  const removeBtn = el('button', { class: 'ul-remove', attrs: { type: 'button', title: t('Remove from list'), 'aria-label': t('Remove from list') } });
   removeBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
   removeBtn.disabled = importRunning;
   removeBtn.addEventListener('click', () => removeQueueEntry(q));
@@ -2245,17 +2257,17 @@ function uploadElapsedText(q) {
 }
 function formatElapsedMs(ms) {
   const s = ms / 1000;
-  if (s < 60) return `${s.toFixed(1)}s`;
+  if (s < 60) return I18N.formatUnit(s, 'second', 1);
   const m = Math.floor(s / 60);
   const rem = Math.round(s - m * 60);
-  return `${m}m ${String(rem).padStart(2, '0')}s`;
+  return `${I18N.formatUnit(m, 'minute', 0)} ${I18N.formatUnit(rem, 'second', 0)}`;
 }
 
 // State cell text: while working, show the live progress detail (e.g. step
 // upload count) instead of just "Working…".
 function uploadStateText(q) {
   if (q.state === 'working' && q.detail) return q.detail;
-  return UL_STATE_LABEL[q.state] || q.state;
+  return UL_STATE_LABEL[q.state] ? t(UL_STATE_LABEL[q.state]) : q.state;
 }
 
 // Patch a single row's status cell in place (avoids rebuilding the whole table).
@@ -2280,8 +2292,8 @@ function importPermissionIssue() {
   const ready = uploadQueue.filter((q) => q.state === 'ready');
   for (const q of ready) {
     const ws = effectiveImportWorkspace(q, selectedWorkspace);
-    if (!q.serviceFileId && !can(PERM.uploadFile, ws)) return 'You do not have permission to upload one or more files to the selected workspace.';
-    if (createResults && !can(PERM.createResult, ws)) return 'You do not have permission to create test results for one or more files.';
+    if (!q.serviceFileId && !can(PERM.uploadFile, ws)) return t('You do not have permission to upload one or more files to the selected workspace.');
+    if (createResults && !can(PERM.createResult, ws)) return t('You do not have permission to create test results for one or more files.');
   }
   return null;
 }
@@ -2306,7 +2318,7 @@ function updateUploadOkDisabled() {
   const anyWrite = canImportToAnyWorkspace();
   const issue = importPermissionIssue();
   const msg = $('#upload-perm-msg');
-  const permissionIssue = hasReady && (issue || (!anyWrite ? 'You do not have permission to import these files.' : ''));
+  const permissionIssue = hasReady && (issue || (!anyWrite ? t('You do not have permission to import these files.') : ''));
   if (msg) { msg.textContent = permissionIssue || ''; msg.hidden = !permissionIssue; }
   $('#upload-ok').disabled = !hasReady || !anyWrite || !!issue;
 }
@@ -2318,7 +2330,7 @@ function setUploadProgress(done, total) {
   wrap.hidden = total <= 0;
   const pct = total ? Math.round((done / total) * 100) : 0;
   $('#upload-progress-fill').style.width = `${pct}%`;
-  $('#upload-progress-text').textContent = `${done} / ${total}`;
+  $('#upload-progress-text').textContent = `${I18N.formatNumber(done)} / ${I18N.formatNumber(total)}`;
 }
 
 // Lock the import options while a run is in progress so they can't change mid-run.
@@ -2363,8 +2375,8 @@ async function uploadFileToService(file, workspaceId) {
   const res = await fetchWithRetry(url, { method: 'POST', credentials: 'same-origin', body: form });
   if (!res.ok) {
     const msg = res.status === 401 || res.status === 403
-      ? 'Not authorized to upload to this workspace.'
-      : `Upload failed (${res.status} ${res.statusText}).`;
+      ? t('Not authorized to upload to this workspace.')
+      : t('Upload failed ({status} {statusText}).', { status: String(res.status), statusText: res.statusText });
     throw new Error(msg);
   }
   const data = await res.json().catch(() => ({}));
@@ -2393,7 +2405,9 @@ async function tmPost(path, body, expectJson = true) {
     const bodyText = await res.text().catch(() => '');
     let detail = '';
     try { const j = JSON.parse(bodyText); detail = (j && j.error && j.error.message) || j.message || ''; } catch { /* not JSON */ }
-    const err = new Error(`Test Monitor request '${path}' failed (${res.status})${detail ? ': ' + detail : ''}.`);
+    const err = new Error(detail
+      ? t("Test Monitor request '{path}' failed ({status}): {detail}.", { path, status: String(res.status), detail })
+      : t("Test Monitor request '{path}' failed ({status}).", { path, status: String(res.status) }));
     err.status = res.status;
     err.detail = detail || bodyText;
     throw err;
@@ -2404,7 +2418,7 @@ async function tmPost(path, body, expectJson = true) {
 async function tmCreateResult(resultRequest) {
   const data = await tmPost('results', { results: [resultRequest] });
   const r = (data.results && data.results[0]) || null;
-  if (!r || !r.id) throw new Error('Failed to create test result.');
+  if (!r || !r.id) throw new Error(t('Failed to create test result.'));
   return r.id;
 }
 // Server caps steps per request three ways: a count (requestMaximumBatchLimit,
@@ -2439,7 +2453,7 @@ function responseFailure(payload) {
     || (failed && typeof failed === 'object');
   if (!payload.error && !hasFailed) return null;
   const detail = typeof payload.error === 'string' ? payload.error : payload.error && payload.error.message;
-  return detail || (hasFailed ? 'The server reported a partial failure.' : 'The server reported an error.');
+  return detail || (hasFailed ? t('The server reported a partial failure.') : t('The server reported an error.'));
 }
 
 // Split a list of steps into batches whose serialized body stays under the byte
@@ -2472,7 +2486,7 @@ async function postStepBatch(batch, isLast) {
   try {
     const data = await tmPost('steps', { steps: batch, updateResultTotalTime: isLast });
     const failure = responseFailure(data);
-    if (failure) throw new Error(`Step upload was incomplete: ${failure}`);
+    if (failure) throw new Error(t('Step upload was incomplete: {detail}', { detail: failure }));
   } catch (err) {
     const tooLarge = err && (err.status === 413 || /body size|too large|request entity/i.test(err.detail || err.message || ''));
     if (tooLarge && batch.length > 1) {
@@ -2648,7 +2662,7 @@ async function deleteFiles(ids) {
     body: JSON.stringify({ ids }),
   });
   const failure = responseFailure(await res.json().catch(() => null));
-  if (failure) throw new Error(`File deletion was incomplete: ${failure}`);
+  if (failure) throw new Error(t('File deletion was incomplete: {detail}', { detail: failure }));
 }
 async function updateFileMetadata(fileId, properties) {
   await apiGet(`${FILE_API}/service-groups/Default/files/${encodeURIComponent(fileId)}/update-metadata`, {
@@ -2664,7 +2678,7 @@ async function deleteExistingArtifacts(results, fileIds, sourceFileId, importOpt
       await tmDeleteResults(results.map((result) => result.id));
       resultsDeleted = true;
     } catch (error) {
-      warnings.push(`Could not delete existing test result(s): ${error.message}`);
+      warnings.push(t('Could not delete existing test result(s): {error}', { error: error.message }));
     }
   }
   const idsToDelete = fileIds.filter((id) => id !== sourceFileId);
@@ -2672,28 +2686,28 @@ async function deleteExistingArtifacts(results, fileIds, sourceFileId, importOpt
     try {
       await deleteFiles(idsToDelete);
     } catch (error) {
-      warnings.push(`Could not delete existing file(s): ${error.message}`);
+      warnings.push(t('Could not delete existing file(s): {error}', { error: error.message }));
       return warnings;
     }
     try {
       await removeFilesFromChecksumIndex(idsToDelete, workspaceId, importOptions);
     } catch (error) {
-      warnings.push(`Replacement succeeded, but the local file index could not be updated: ${error.message}`);
+      warnings.push(t('Replacement succeeded, but the local file index could not be updated: {error}', { error: error.message }));
     }
   } else if (idsToDelete.length && !resultsDeleted) {
-    warnings.push('Existing files were retained because their test result could not be deleted.');
+    warnings.push(t('Existing files were retained because their test result could not be deleted.'));
   }
   return warnings;
 }
 function cleanupWarningText(warnings) {
-  return warnings.length ? ` Cleanup warning: ${warnings.join(' ')}` : '';
+  return warnings.length ? ` ${t('Cleanup warning: {warnings}', { warnings: warnings.join(' ') })}` : '';
 }
 function assertReplacementPermissions(results, fileIds, sourceFileId, workspaceId) {
   if (results.length && !can(PERM.deleteResult, workspaceId)) {
-    throw new Error('You do not have permission to replace existing test results in this workspace.');
+    throw new Error(t('You do not have permission to replace existing test results in this workspace.'));
   }
   if (fileIds.some((id) => id !== sourceFileId) && !can(PERM.deleteFile, workspaceId)) {
-    throw new Error('You do not have permission to replace existing files in this workspace.');
+    throw new Error(t('You do not have permission to replace existing files in this workspace.'));
   }
 }
 async function cleanupCreatedResult(resultId, fileId, deleteFile) {
@@ -2761,7 +2775,7 @@ function extractPartNumber(results) {
 function buildResultAndSteps(doc, opts) {
   const results = firstByLocal(doc, 'TestResults') || doc.documentElement;
   const resultSets = resultSetsFor(doc);
-  if (!resultSets.length) throw new Error('ATML file contains no ResultSet.');
+  if (!resultSets.length) throw new Error(t('ATML file contains no ResultSet.'));
   const rootNodes = resultSets.map(buildResultSetRootNode);
 
   const operator = attr(firstByLocal(results, 'SystemOperator'), 'name') || null;
@@ -2854,7 +2868,7 @@ async function withImportLock(key, operation) {
 async function importOneFile(q, opts) {
   const isServiceFile = !!q.serviceFileId;
   const workspaceId = isServiceFile ? (q.workspace || opts.workspaceId) : opts.workspaceId;
-  if (!workspaceId) throw new Error('Select a workspace before importing.');
+  if (!workspaceId) throw new Error(t('Select a workspace before importing.'));
   const text = q.text != null ? q.text : await q.file.text();
   const checksum = await sha256Hex(text);
   q.checksum = checksum;
@@ -2865,14 +2879,14 @@ async function importOneFileLocked(q, opts, workspaceId, text, checksum) {
   const isServiceFile = !!q.serviceFileId;
 
   if (isServiceFile && !opts.createResults) {
-    return { state: 'skipped', detail: 'Skipped — Create result data is disabled for an existing File Service file.' };
+    return { state: 'skipped', detail: t('Skipped — Create result data is disabled for an existing File Service file.') };
   }
 
   let doc = null;
   if (opts.createResults) {
     doc = new DOMParser().parseFromString(text, 'application/xml');
-    if (doc.querySelector('parsererror')) throw new Error('File is not valid XML.');
-    if (!isAtml(doc)) throw new Error('File is not recognized as ATML.');
+    if (doc.querySelector('parsererror')) throw new Error(t('File is not valid XML.'));
+    if (!isAtml(doc)) throw new Error(t('File is not recognized as ATML.'));
   }
 
   if (!opts.createResults && !isServiceFile) {
@@ -2886,7 +2900,11 @@ async function importOneFileLocked(q, opts, workspaceId, text, checksum) {
     const existingFileIds = [...new Set([...fileIdsFromResults, ...orphanFileIds])];
 
     if (existingFileIds.length && !opts.replace) {
-      return { state: 'skipped', detail: `Skipped — a file with this checksum already exists (${existingFileIds.length} file(s)). Enable "Replace existing files/results?" to overwrite.` };
+      return { state: 'skipped', detail: tn(
+        'Skipped — a file with this checksum already exists ({count} file). Enable "Replace existing files/results?" to overwrite.',
+        'Skipped — a file with this checksum already exists ({count} files). Enable "Replace existing files/results?" to overwrite.',
+        existingFileIds.length,
+      ) };
     }
     const replacing = existingFileIds.length > 0 || priorResults.length > 0;
     if (replacing && opts.replace) assertReplacementPermissions(priorResults, existingFileIds, null, workspaceId);
@@ -2895,7 +2913,7 @@ async function importOneFileLocked(q, opts, workspaceId, text, checksum) {
       await updateFileMetadata(id, { 'ATML Checksum': checksum });
     } catch (e) {
       await deleteFiles([id]).catch((cleanupError) => console.warn('[import] cleanup after metadata failure failed', cleanupError));
-      throw new Error(`File uploaded but its checksum metadata could not be saved: ${e.message}`);
+      throw new Error(t('File uploaded but its checksum metadata could not be saved: {error}', { error: e.message }));
     }
     await indexFileForChecksum({ id, workspace: workspaceId, properties: { 'ATML Checksum': checksum } }, workspaceId, opts);
     const replaced = replacing && opts.replace;
@@ -2904,7 +2922,10 @@ async function importOneFileLocked(q, opts, workspaceId, text, checksum) {
       : [];
     return {
       state: replaced ? 'replaced' : 'uploaded',
-      detail: `${replaced ? 'Replaced existing file' : 'File uploaded'} (checksum ${checksum.slice(0, 12)}…). No result created.${cleanupWarningText(cleanupWarnings)}`,
+      detail: t(replaced
+        ? 'Replaced existing file (checksum {checksum}…). No result created.'
+        : 'File uploaded (checksum {checksum}…). No result created.', { checksum: checksum.slice(0, 12) })
+        + cleanupWarningText(cleanupWarnings),
       fileId: id,
     };
   }
@@ -2919,7 +2940,10 @@ async function importOneFileLocked(q, opts, workspaceId, text, checksum) {
 
   // Already fully imported (a result exists) and not replacing → skip.
   if (hasResult && !opts.replace) {
-    return { state: 'skipped', detail: `Skipped — a result with this checksum already exists (${existingResults.length} result(s), ${existingFileIds.length} file(s)). Enable "Replace existing files/results?" to overwrite.` };
+    return { state: 'skipped', detail: t(
+      'Skipped — a result with this checksum already exists ({results} result(s), {files} file(s)). Enable "Replace existing files/results?" to overwrite.',
+      { results: existingResults.length, files: existingFileIds.length },
+    ) };
   }
 
   // Service file: reuse its existing id (no upload). Otherwise reuse a
@@ -2944,7 +2968,7 @@ async function importOneFileLocked(q, opts, workspaceId, text, checksum) {
     steps = buildSteps(resultId);
     if (steps.length) {
       await tmCreateSteps(steps, (uploaded, total) => {
-        q.detail = `Uploading steps ${uploaded.toLocaleString()} / ${total.toLocaleString()}…`;
+        q.detail = t('Uploading steps {uploaded} / {total}…', { uploaded, total });
         updateUploadRow(q);
       });
     }
@@ -2961,7 +2985,7 @@ async function importOneFileLocked(q, opts, workspaceId, text, checksum) {
     await rollbackFileMetadata(updatedMetadata);
     if (resultId) await cleanupCreatedResult(resultId, fileId, createdFile);
     else if (createdFile) await deleteFiles([fileId]).catch((cleanupError) => console.warn('[import] cleanup file after result creation failure failed', cleanupError));
-    throw new Error(`ATML import failed: ${e.message}`);
+    throw new Error(t('ATML import failed: {error}', { error: e.message }));
   }
 
   let replaced = false;
@@ -2971,19 +2995,32 @@ async function importOneFileLocked(q, opts, workspaceId, text, checksum) {
     replaced = true;
   }
 
+  const stepParams = { id: resultId, count: steps.length };
   let resultState, detail;
   if (replaced) {
     resultState = 'replaced';
-    detail = `Replaced existing file/result. Created result ${resultId} with ${steps.length} step(s).${cleanupWarningText(cleanupWarnings)}`;
+    detail = tn(
+      'Replaced existing file/result. Created result {id} with {count} step.',
+      'Replaced existing file/result. Created result {id} with {count} steps.',
+      steps.length, stepParams,
+    ) + cleanupWarningText(cleanupWarnings);
   } else if (isServiceFile) {
     resultState = 'created';
-    detail = `Created result ${resultId} with ${steps.length} step(s) from the viewed file.`;
+    detail = tn(
+      'Created result {id} with {count} step from the viewed file.',
+      'Created result {id} with {count} steps from the viewed file.',
+      steps.length, stepParams,
+    );
   } else if (reusedFileId) {
     resultState = 'created';
-    detail = `File was already uploaded — created result ${resultId} with ${steps.length} step(s) and linked it to the existing file.`;
+    detail = tn(
+      'File was already uploaded — created result {id} with {count} step and linked it to the existing file.',
+      'File was already uploaded — created result {id} with {count} steps and linked it to the existing file.',
+      steps.length, stepParams,
+    );
   } else {
     resultState = 'created';
-    detail = `Created result ${resultId} with ${steps.length} step(s).`;
+    detail = tn('Created result {id} with {count} step.', 'Created result {id} with {count} steps.', steps.length, stepParams);
   }
   return { state: resultState, detail, fileId, resultId };
 }
@@ -3100,6 +3137,9 @@ function wireUploadDrawer() {
 }
 
 function init() {
+  I18N.translateDom(document.body);
+  I18N.applyNimbleLabels(document);
+  $('#theme-provider').setAttribute('lang', I18N.lang);
   initTheme();
   const demoBadge = $('#demo-badge');
   if (demoBadge && window.__ATML_DEMO_MODE__) demoBadge.hidden = false;
@@ -3185,7 +3225,7 @@ function init() {
   loadPrivileges();
 
   fetchWorkspaces().then((list) => {
-    const sorted = list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    const sorted = list.sort((a, b) => I18N.compare(a.name, b.name));
     const sel = $('#workspace-select');
     const upSel = $('#upload-workspace');
     for (const w of sorted) {

@@ -23,6 +23,8 @@ up in Test Insights alongside the rest of your data.
   privileges so users only act where they are entitled.
 - **Theme sync** — follows the SystemLink light/dark theme using NI Nimble
   components.
+- **Localization** — follows the SystemLink UI language (English, German,
+  French, Japanese, Chinese) for text, dates, numbers, and Nimble labels.
 
 ## SystemLink APIs Used
 

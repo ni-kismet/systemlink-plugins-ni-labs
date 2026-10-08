@@ -1,6 +1,6 @@
 {
   "package": "atml-file-manager",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "displayName": "ATML File Manager",
   "description": "Browse SystemLink files, render ATML (IEEE 1671/1636) test results in a readable summary and step tree, and import ATML files as native Test Monitor results.",
   "section": "Lab Management",
