@@ -123,21 +123,15 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         working-directory: ${{ matrix.path }}
         run: |
-          if gh release view "${{ matrix.tag }}" >/dev/null 2>&1; then
-            gh release upload "${{ matrix.tag }}" \
-              "${{ steps.artifacts.outputs.nipkg_path }}" \
-              sbom/*.cyclonedx.json sbom/*.spdx.json \
-              --clobber
-            CYCLONEDX_NAME=$(basename sbom/*.cyclonedx.json)
-            SPDX_NAME=$(basename sbom/*.spdx.json)
-            NIPKG_NAME=$(basename "${{ steps.artifacts.outputs.nipkg_path }}")
-            gh release view "${{ matrix.tag }}" --json assets --jq \
-              '.assets[].name | select(test("[.]nipkg$") or test("[.](cyclonedx|spdx)[.]json$"))' |
-              while IFS= read -r asset; do
-                if [ "$asset" != "$NIPKG_NAME" ] && [ "$asset" != "$CYCLONEDX_NAME" ] && [ "$asset" != "$SPDX_NAME" ]; then
-                  gh release delete-asset "${{ matrix.tag }}" "$asset" --yes
-                fi
-              done
+          RELEASE_ASSETS="$RUNNER_TEMP/release-assets"
+          if gh release view "${{ matrix.tag }}" --json assets --jq '.assets[].name' > "$RELEASE_ASSETS"; then
+            for asset in "${{ steps.artifacts.outputs.nipkg_path }}" sbom/*.cyclonedx.json sbom/*.spdx.json; do
+              asset_name=$(basename "$asset")
+              if ! grep -Fqx "$asset_name" "$RELEASE_ASSETS"; then
+                gh release upload "${{ matrix.tag }}" "$asset"
+                echo "$asset_name" >> "$RELEASE_ASSETS"
+              fi
+            done
           else
             gh release create "${{ matrix.tag }}" \
               "${{ steps.artifacts.outputs.nipkg_path }}" \
@@ -145,11 +139,12 @@ jobs:
               --title "${{ matrix.displayName }} v${{ matrix.version }}" \
               --notes "Release of ${{ matrix.displayName }} v${{ matrix.version }}" \
               --latest=false
+            gh release view "${{ matrix.tag }}" --json assets --jq '.assets[].name' > "$RELEASE_ASSETS"
           fi
 
           for icon in icon.svg icon.png; do
-            if [ -f "$icon" ]; then
-              gh release upload "${{ matrix.tag }}" "$icon" --clobber
+            if [ -f "$icon" ] && ! grep -Fqx "$icon" "$RELEASE_ASSETS"; then
+              gh release upload "${{ matrix.tag }}" "$icon"
             fi
           done
 
