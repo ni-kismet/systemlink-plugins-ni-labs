@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, Inject, LOCALE_ID, OnInit } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 
 import { AppViewStateService } from '../../core/state/app-view-state.service';
@@ -17,11 +17,11 @@ interface StatTile {
 }
 
 interface PieSlice {
+  key: string;
   path: string;
   color: string;
   percent: string;
-  label: string;
-  count: number;
+  tip: string;
   labelX: number;
   labelY: number;
 }
@@ -40,6 +40,8 @@ interface BarColumn {
   managed: number;
   unmanaged: number;
   total: number;
+  managedTip: string;
+  unmanagedTip: string;
 }
 
 interface AxisTick {
@@ -53,6 +55,15 @@ const UNMANAGED_COLOR = 'var(--app-unmanaged-color)';
 const BAR_WIDTH_TOTAL = 760;
 const BAR_HEIGHT_TOTAL = 190;
 const BAR_PADDING = { top: 20, right: 16, bottom: 28, left: 44 };
+
+// Display labels for the raw nodeType/status values, which stay untranslated for filtering.
+const VALUE_LABELS: Record<string, string> = {
+  Managed: $localize`Managed`,
+  Unmanaged: $localize`Unmanaged`,
+  Active: $localize`Active`,
+  Inactive: $localize`Inactive`,
+  Virtual: $localize`Virtual`,
+};
 
 @Component({
   selector: 'sl-home-page',
@@ -90,6 +101,7 @@ export class HomePageComponent implements OnInit {
   constructor(
     private readonly dataService: WebappHomeDataService,
     appViewState: AppViewStateService,
+    @Inject(LOCALE_ID) private readonly locale: string,
   ) {
     this.state = appViewState.create<HomePageModel>();
     this.demoMode = dataService.isDemoMode;
@@ -120,7 +132,7 @@ export class HomePageComponent implements OnInit {
           this.enriching = false;
         });
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Failed to load node license data.';
+      const message = error instanceof Error ? error.message : $localize`Failed to load node license data.`;
       this.state = { ...this.state, isLoading: false, error: message };
     }
   }
@@ -145,14 +157,14 @@ export class HomePageComponent implements OnInit {
   }
 
   exportCsv(): void {
-    const columns: { header: string; field: keyof NodeDetailRow }[] = [
-      { header: 'Alias', field: 'alias' },
-      { header: 'Minion ID', field: 'id' },
-      { header: 'Host Name', field: 'hostName' },
-      { header: 'Node Type', field: 'nodeType' },
-      { header: 'Status', field: 'status' },
-      { header: 'Registered', field: 'registered' },
-      { header: 'Last Active', field: 'lastActive' },
+    const columns: { header: string; field: keyof NodeDetailRow; translate?: boolean }[] = [
+      { header: $localize`Alias`, field: 'alias' },
+      { header: $localize`Minion ID`, field: 'id' },
+      { header: $localize`Host Name`, field: 'hostName' },
+      { header: $localize`Node Type`, field: 'nodeType', translate: true },
+      { header: $localize`Status`, field: 'status', translate: true },
+      { header: $localize`Registered`, field: 'registered' },
+      { header: $localize`Last Active`, field: 'lastActive' },
     ];
     // Always export the full data set, regardless of the active summary-card filter.
     const rows = this.allRows;
@@ -162,7 +174,11 @@ export class HomePageComponent implements OnInit {
     };
     const lines = [
       columns.map((c) => escape(c.header)).join(','),
-      ...rows.map((row) => columns.map((c) => escape(row[c.field])).join(',')),
+      ...rows.map((row) =>
+        columns
+          .map((c) => escape(c.translate ? (VALUE_LABELS[row[c.field]] ?? row[c.field]) : row[c.field]))
+          .join(','),
+      ),
     ];
     const blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -201,39 +217,33 @@ export class HomePageComponent implements OnInit {
     this.tiles = [
       {
         key: 'total',
-        label: 'Total Nodes',
+        label: $localize`Total Nodes`,
         value: model.managed + model.unmanaged,
-        description: 'Total licensed nodes: the sum of Managed and Unmanaged nodes.',
+        description: $localize`Total licensed nodes: the sum of Managed and Unmanaged nodes.`,
       },
       {
         key: 'managed',
-        label: 'Managed',
+        label: $localize`Managed`,
         value: model.managed,
-        description:
-          'A system that is not virtual and has a valid host name. Counted against licensing no matter ' +
-          'how long it has been online.',
+        description: $localize`A system that is not virtual and has a valid host name. Counted against licensing no matter how long it has been online.`,
       },
       {
         key: 'unmanaged',
-        label: 'Unmanaged',
+        label: $localize`Unmanaged`,
         value: model.unmanaged,
-        description:
-          'A system that is not Managed but has reported test results in the last 12 months, or any ' +
-          'virtual system regardless of whether the system has results.',
+        description: $localize`A system that is not Managed but has reported test results in the last 12 months, or any virtual system regardless of whether the system has results.`,
       },
       {
         key: 'inactive',
-        label: 'Managed (Inactive)',
+        label: $localize`Managed (Inactive)`,
         value: model.inactive,
-        description:
-          'A Managed system that has not been online in the last 12 months. Still counted against ' +
-          'licensing, so it is a good candidate to remove and free up a license.',
+        description: $localize`A Managed system that has not been online in the last 12 months. Still counted against licensing, so it is a good candidate to remove and free up a license.`,
       },
       {
         key: 'virtual',
-        label: 'Unmanaged (Virtual)',
+        label: $localize`Unmanaged (Virtual)`,
         value: model.virtual,
-        description: 'A system classified as virtual by SystemLink.',
+        description: $localize`A system classified as virtual by SystemLink.`,
       },
     ];
     this.pieSlices = this.buildPie(model.managed, model.unmanaged);
@@ -250,11 +260,12 @@ export class HomePageComponent implements OnInit {
     const cy = 110;
     const r = 100;
     const segments = [
-      { value: managed, color: MANAGED_COLOR, label: 'Managed' },
-      { value: unmanaged, color: UNMANAGED_COLOR, label: 'Unmanaged' },
+      { key: 'managed', value: managed, color: MANAGED_COLOR, tip: $localize`Managed: ${managed}:count:` },
+      { key: 'unmanaged', value: unmanaged, color: UNMANAGED_COLOR, tip: $localize`Unmanaged: ${unmanaged}:count:` },
     ];
 
     const slices: PieSlice[] = [];
+    const percentFormat = new Intl.NumberFormat(this.locale, { style: 'percent', maximumFractionDigits: 0 });
     let startAngle = -Math.PI / 2;
     for (const segment of segments) {
       if (segment.value === 0) {
@@ -277,11 +288,11 @@ export class HomePageComponent implements OnInit {
             `A ${r} ${r} 0 1 1 ${x1.toFixed(2)} ${y1.toFixed(2)} Z`
           : `M ${cx} ${cy} L ${x1.toFixed(2)} ${y1.toFixed(2)} A ${r} ${r} 0 ${largeArc} 1 ${x2.toFixed(2)} ${y2.toFixed(2)} Z`;
       slices.push({
+        key: segment.key,
         path,
         color: segment.color,
-        percent: `${Math.round(fraction * 100)}%`,
-        label: segment.label,
-        count: segment.value,
+        percent: percentFormat.format(fraction),
+        tip: segment.tip,
         labelX: cx + r * 0.55 * Math.cos(midAngle),
         labelY: cy + r * 0.55 * Math.sin(midAngle),
       });
@@ -320,6 +331,8 @@ export class HomePageComponent implements OnInit {
         managed: point.managed,
         unmanaged: point.unmanaged,
         total,
+        managedTip: $localize`${point.month}:month: · Managed: ${point.managed}:count:`,
+        unmanagedTip: $localize`${point.month}:month: · Unmanaged: ${point.unmanaged}:count:`,
       };
     });
 

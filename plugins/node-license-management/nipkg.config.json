@@ -1,6 +1,6 @@
 {
   "package": "node-license-management",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "displayName": "Node License Management",
   "description": "A read-only SystemLink web app that reports managed (licensed), unmanaged, inactive, and virtual node counts with a 12-month trend and per-node detail.",
   "section": "Systems Management",

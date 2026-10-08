@@ -15,8 +15,9 @@ interface DemoRowOptions {
   resultId?: string;
 }
 
-export function createDemoHomePageModel(): HomePageModel {
+export function createDemoHomePageModel(locale: string): HomePageModel {
   const now = new Date();
+  const createRow = (options: DemoRowOptions, at: Date): NodeDetailRow => buildRow(options, at, locale);
   const detail = [
     createRow(
       {
@@ -177,7 +178,7 @@ export function createDemoHomePageModel(): HomePageModel {
     ),
     createRow(
       {
-        hostName: '(no host name)',
+        hostName: $localize`(no host name)`,
         nodeType: 'Unmanaged',
         status: 'Active',
         registeredDaysAgo: null,
@@ -200,7 +201,7 @@ export function createDemoHomePageModel(): HomePageModel {
   };
 }
 
-function createRow(options: DemoRowOptions, now: Date): NodeDetailRow {
+function buildRow(options: DemoRowOptions, now: Date, locale: string): NodeDetailRow {
   const registered = options.registeredDaysAgo === null ? null : daysAgo(now, options.registeredDaysAgo);
   const lastActive = options.lastActiveDaysAgo === null ? null : daysAgo(now, options.lastActiveDaysAgo);
   const id = options.id ?? '';
@@ -217,11 +218,11 @@ function createRow(options: DemoRowOptions, now: Date): NodeDetailRow {
     hostRaw: options.hostName,
     nodeType: options.nodeType,
     status: options.status,
-    registered: formatTimestamp(registered),
-    lastActive: formatTimestamp(lastActive),
+    registered: formatTimestamp(registered, locale),
+    lastActive: formatTimestamp(lastActive, locale),
     lastActiveIso: lastActive?.toISOString() ?? '',
     resultUrl,
-    resultLabel: resultUrl ? 'View Result' : '',
+    resultLabel: resultUrl ? $localize`View Result` : '',
   };
 }
 
@@ -260,19 +261,8 @@ function daysAgo(now: Date, days: number): Date {
   return date;
 }
 
-function formatTimestamp(date: Date | null): string {
-  if (!date) {
-    return '';
-  }
-  return date.toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: true,
-  });
+function formatTimestamp(date: Date | null, locale: string): string {
+  return date ? date.toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'medium' }) : '';
 }
 
 function pad(value: number): string {

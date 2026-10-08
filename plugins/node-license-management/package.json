@@ -1,12 +1,13 @@
 {
   "name": "@ni-kismet/node-license-management",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "license": "MIT",
   "description": "A read-only SystemLink web app that reports managed, unmanaged, inactive, and virtual node counts with a 12-month trend and per-node detail.",
   "scripts": {
     "start": "ng serve --host 0.0.0.0",
     "build": "ng build",
+    "i18n": "ng extract-i18n --format json --output-path src/locale && node scripts/i18n-sync.mjs",
     "clean": "rm -rf dist submission-manifest.json",
     "package": "npm run clean && npm run build && node ../../scripts/build-plugin-package.mjs . && node ../../scripts/verify-plugin-package.mjs .",
     "submission-manifest": "npm run package && node ../../scripts/create-submission-manifest.mjs ."

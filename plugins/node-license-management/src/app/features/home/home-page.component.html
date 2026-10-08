@@ -2,13 +2,13 @@
   <ok-fv-sticky-header>
     <div class="hero" slot="header">
       <header class="app-header">
-        <h1>Node License Management</h1>
-        <p *ngIf="demoMode" class="app-version" role="status">Demo data</p>
-        <p class="subhead">Track managed vs. unmanaged node license usage across your SystemLink systems.</p>
+        <h1 i18n>Node License Management</h1>
+        <p *ngIf="demoMode" class="app-version" role="status" i18n>Demo data</p>
+        <p class="subhead" i18n>Track managed vs. unmanaged node license usage across your SystemLink systems.</p>
       </header>
 
       <ng-container *ngIf="!state.isLoading && state.value as model">
-        <section class="summary-grid" aria-label="Node license summary" [attr.aria-busy]="state.isLoading">
+        <section class="summary-grid" aria-label="Node license summary" i18n-aria-label [attr.aria-busy]="state.isLoading">
           <div class="summary-panel-shell">
             <ok-fv-summary-panel>
               <ok-fv-summary-panel-tile
@@ -37,9 +37,9 @@
       </ng-container>
     </div>
     <header class="app-header app-header--sticky" slot="sticky-header">
-      <h1>Node License Management</h1>
+      <h1 i18n>Node License Management</h1>
       <ng-container *ngIf="!state.isLoading && state.value as model">
-        <section class="summary-grid summary-grid--sticky" aria-label="Node license summary">
+        <section class="summary-grid summary-grid--sticky" aria-label="Node license summary" i18n-aria-label>
           <div class="summary-panel-shell">
             <ok-fv-summary-panel size="compact">
               <ok-fv-summary-panel-tile
@@ -69,22 +69,24 @@
     </header>
   </ok-fv-sticky-header>
 
-  <section class="toolbar" aria-label="Dashboard actions">
+  <section class="toolbar" aria-label="Dashboard actions" i18n-aria-label>
     <div class="toolbar__actions">
       <nimble-button appearance="ghost" (click)="exportCsv()">
         <nimble-icon-download slot="start"></nimble-icon-download>
-        Export CSV
+        <ng-container i18n>Export CSV</ng-container>
       </nimble-button>
       <nimble-button
         appearance="ghost"
         content-hidden
         title="Refresh"
+        i18n-title
         aria-label="Refresh"
+        i18n-aria-label
         [disabled]="state.isLoading || enriching"
         (click)="reload()"
       >
         <nimble-icon-arrow-rotate-right slot="start"></nimble-icon-arrow-rotate-right>
-        Refresh
+        <ng-container i18n>Refresh</ng-container>
       </nimble-button>
     </div>
   </section>
@@ -96,18 +98,18 @@
     <div class="dashboard__scroll-area">
       <section class="dashboard__charts">
       <article class="chart-card">
-        <h3>Unmanaged / Managed Nodes</h3>
+        <h3 i18n>Unmanaged / Managed Nodes</h3>
         <div class="chart-card__body chart-card__body--pie">
-          <svg viewBox="0 0 220 220" class="pie" role="img" aria-label="Managed versus unmanaged node share">
+          <svg viewBox="0 0 220 220" class="pie" role="img" aria-label="Managed versus unmanaged node share" i18n-aria-label>
             <g *ngFor="let slice of pieSlices">
               <path
                 class="pie__slice"
-                [class.pie__slice--active]="hoverSlice === slice.label"
-                [class.pie__slice--dim]="hoverSlice && hoverSlice !== slice.label"
+                [class.pie__slice--active]="hoverSlice === slice.key"
+                [class.pie__slice--dim]="hoverSlice && hoverSlice !== slice.key"
                 [attr.d]="slice.path"
                 [attr.fill]="slice.color"
-                (mouseenter)="hoverSlice = slice.label; showTip($event, slice.label + ': ' + slice.count)"
-                (mousemove)="showTip($event, slice.label + ': ' + slice.count)"
+                (mouseenter)="hoverSlice = slice.key; showTip($event, slice.tip)"
+                (mousemove)="showTip($event, slice.tip)"
                 (mouseleave)="hoverSlice = null; hideTip()"
               ></path>
               <text
@@ -122,20 +124,21 @@
             </g>
           </svg>
           <ul class="legend">
-            <li><span class="legend__swatch" [style.background]="managedColor"></span>Managed</li>
-            <li><span class="legend__swatch" [style.background]="unmanagedColor"></span>Unmanaged</li>
+            <li><span class="legend__swatch" [style.background]="managedColor"></span><ng-container i18n>Managed</ng-container></li>
+            <li><span class="legend__swatch" [style.background]="unmanagedColor"></span><ng-container i18n>Unmanaged</ng-container></li>
           </ul>
         </div>
       </article>
 
       <article class="chart-card chart-card--wide">
-        <h3>Nodes in Use Over Time (monthly snapshot)</h3>
+        <h3 i18n>Nodes in Use Over Time (monthly snapshot)</h3>
         <div class="chart-card__body">
           <svg
             [attr.viewBox]="'0 0 ' + barWidth + ' ' + barHeight"
             class="bars"
             role="img"
             aria-label="Managed and unmanaged node counts per month"
+            i18n-aria-label
           >
             <g class="bars__grid">
               <g *ngFor="let tick of axisTicks">
@@ -155,8 +158,8 @@
                 [attr.width]="bar.barWidth"
                 [attr.height]="bar.unmanagedHeight"
                 [attr.fill]="unmanagedColor"
-                (mouseenter)="hoverBar = bar.month + '|u'; showTip($event, bar.month + ' · Unmanaged: ' + bar.unmanaged)"
-                (mousemove)="showTip($event, bar.month + ' · Unmanaged: ' + bar.unmanaged)"
+                (mouseenter)="hoverBar = bar.month + '|u'; showTip($event, bar.unmanagedTip)"
+                (mousemove)="showTip($event, bar.unmanagedTip)"
                 (mouseleave)="hoverBar = null; hideTip()"
               ></rect>
               <rect
@@ -168,8 +171,8 @@
                 [attr.width]="bar.barWidth"
                 [attr.height]="bar.managedHeight"
                 [attr.fill]="managedColor"
-                (mouseenter)="hoverBar = bar.month + '|m'; showTip($event, bar.month + ' · Managed: ' + bar.managed)"
-                (mousemove)="showTip($event, bar.month + ' · Managed: ' + bar.managed)"
+                (mouseenter)="hoverBar = bar.month + '|m'; showTip($event, bar.managedTip)"
+                (mousemove)="showTip($event, bar.managedTip)"
                 (mouseleave)="hoverBar = null; hideTip()"
               ></rect>
               <text
@@ -209,15 +212,15 @@
             </g>
           </svg>
           <ul class="legend">
-            <li><span class="legend__swatch" [style.background]="unmanagedColor"></span>Count Unmanaged</li>
-            <li><span class="legend__swatch" [style.background]="managedColor"></span>Count Managed</li>
+            <li><span class="legend__swatch" [style.background]="unmanagedColor"></span><ng-container i18n>Count Unmanaged</ng-container></li>
+            <li><span class="legend__swatch" [style.background]="managedColor"></span><ng-container i18n>Count Managed</ng-container></li>
           </ul>
         </div>
       </article>
       </section>
 
       <section class="dashboard__table">
-      <nimble-spinner class="table-spinner" *ngIf="enriching" title="Updating results…"></nimble-spinner>
+      <nimble-spinner class="table-spinner" *ngIf="enriching" title="Updating results…" i18n-title></nimble-spinner>
       <nimble-table
         id-field-name="rowId"
         [data$]="detailData$"
@@ -232,49 +235,53 @@
           underline-hidden
           fractional-width="2.5"
           min-pixel-width="340"
-        >
-          Alias
-        </nimble-table-column-anchor>
-        <nimble-table-column-text field-name="id">Minion ID</nimble-table-column-text>
-        <nimble-table-column-text field-name="hostName">Host Name</nimble-table-column-text>
+          i18n
+        >Alias</nimble-table-column-anchor>
+        <nimble-table-column-text field-name="id" i18n>Minion ID</nimble-table-column-text>
+        <nimble-table-column-text field-name="hostName" i18n>Host Name</nimble-table-column-text>
         <nimble-table-column-mapping field-name="nodeType" key-type="string">
-          Node Type
+          <ng-container i18n>Node Type</ng-container>
           <nimble-mapping-icon
             key="Managed"
             text="Managed"
+            i18n-text
             icon="nimble-icon-circle-filled"
             severity="success"
           ></nimble-mapping-icon>
           <nimble-mapping-icon
             key="Unmanaged"
             text="Unmanaged"
+            i18n-text
             icon="nimble-icon-circle-filled"
             severity="error"
           ></nimble-mapping-icon>
         </nimble-table-column-mapping>
         <nimble-table-column-mapping field-name="status" key-type="string">
-          Status
+          <ng-container i18n>Status</ng-container>
           <nimble-mapping-icon
             key="Active"
             text="Active"
+            i18n-text
             icon="nimble-icon-circle-filled"
             severity="success"
           ></nimble-mapping-icon>
           <nimble-mapping-icon
             key="Inactive"
             text="Inactive"
+            i18n-text
             icon="nimble-icon-circle-filled"
             severity="warning"
           ></nimble-mapping-icon>
           <nimble-mapping-icon
             key="Virtual"
             text="Virtual"
+            i18n-text
             icon="nimble-icon-circle-filled"
             severity="information"
           ></nimble-mapping-icon>
         </nimble-table-column-mapping>
-        <nimble-table-column-text field-name="registered">Registered</nimble-table-column-text>
-        <nimble-table-column-text field-name="lastActive">Last Active</nimble-table-column-text>
+        <nimble-table-column-text field-name="registered" i18n>Registered</nimble-table-column-text>
+        <nimble-table-column-text field-name="lastActive" i18n>Last Active</nimble-table-column-text>
         <nimble-table-column-anchor
           label-field-name="resultLabel"
           href-field-name="resultUrl"
@@ -282,9 +289,8 @@
           placeholder="&mdash;"
           appearance="prominent"
           underline-hidden
-        >
-          Result
-        </nimble-table-column-anchor>
+          i18n
+        >Result</nimble-table-column-anchor>
       </nimble-table>
       </section>
     </div>

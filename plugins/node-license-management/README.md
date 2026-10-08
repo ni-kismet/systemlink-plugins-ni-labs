@@ -20,6 +20,8 @@ per-node detail with links back to the source system and its latest test result.
 - **SLE and SLS compatible** — probes for virtual-node support and adapts the
   system queries so the app runs on both SystemLink Enterprise and Server.
 - **CSV export** — exports the full, unfiltered node list.
+- **Localized** — follows the SystemLink UI language (English, German, French,
+  Japanese, Chinese), reusing SystemLink's own translations where available.
 - **Theme sync** — automatically follows the SystemLink light/dark theme.
 
 ## SystemLink APIs Used

@@ -1,5 +1,5 @@
 import { APP_BASE_HREF, CommonModule } from '@angular/common';
-import { NgModule } from '@angular/core';
+import { NgModule, LOCALE_ID } from '@angular/core';
 
 import {
   NimbleBannerModule,
@@ -24,6 +24,7 @@ import { OkFvSummaryPanelTileModule } from '@ni/ok-angular/fv/summary-panel-tile
 import '@ni/nimble-components/dist/esm/icons/circle-filled';
 
 import { AppRoutingModule } from './app-routing.module';
+import { getSystemLinkLanguage } from './core/utils/language.utils';
 import { HomePageComponent } from './features/home/home-page.component';
 import { EmptyStateComponent } from './shared/components/empty-state.component';
 import { ErrorBannerComponent } from './shared/components/error-banner.component';
@@ -56,6 +57,9 @@ import { LoadingStateComponent } from './shared/components/loading-state.compone
     OkFvSummaryPanelModule,
     OkFvSummaryPanelTileModule,
   ],
-  providers: [{ provide: APP_BASE_HREF, useValue: '/' }],
+  providers: [
+    { provide: APP_BASE_HREF, useValue: '/' },
+    { provide: LOCALE_ID, useFactory: getSystemLinkLanguage },
+  ],
 })
 export class AppModule {}
