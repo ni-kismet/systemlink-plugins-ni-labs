@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="SystemLink Usage Statistics">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"  stop-color="#00ad7c"/>
+      <stop offset="30%" stop-color="#00855f"/>
+      <stop offset="77%" stop-color="#014a35"/>
+      <stop offset="100%" stop-color="#023325"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background tile -->
+  <rect x="16" y="16" width="480" height="480" rx="104" fill="url(#bg)"/>
+
+  <!-- Ascending bars (white filled, rounded) -->
+  <rect x="78"  y="308" width="82" height="124" rx="12" fill="#ffffff"/>
+  <rect x="215" y="208" width="82" height="224" rx="12" fill="#ffffff"/>
+  <rect x="352" y="112" width="82" height="320" rx="12" fill="#ffffff"/>
+
+  <!-- Power Green trend line connecting bar tops -->
+  <polyline
+    points="119,308 256,208 393,112"
+    fill="none"
+    stroke="#32eb96"
+    stroke-width="26"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <!-- Power Green accent circle at the peak -->
+  <circle cx="393" cy="112" r="28" fill="#32eb96"/>
+</svg>
