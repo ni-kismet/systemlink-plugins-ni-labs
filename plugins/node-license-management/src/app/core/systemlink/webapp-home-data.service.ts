@@ -1,4 +1,14 @@
 import { Injectable } from '@angular/core';
+import { querySystems } from '@ni/systemlink-clients-ts/systems-management';
+import {
+  createClient as createSystemsManagementClient,
+  createConfig as createSystemsManagementConfig,
+} from '@ni/systemlink-clients-ts/systems-management/client';
+import { queryResultsV2, type ResultsAdvancedQuery } from '@ni/systemlink-clients-ts/test-monitor';
+import {
+  createClient as createTestMonitorClient,
+  createConfig as createTestMonitorConfig,
+} from '@ni/systemlink-clients-ts/test-monitor/client';
 
 import { createDemoHomePageModel } from '../demo/demo-home-data';
 import { SystemLinkContextService } from './systemlink-context.service';
@@ -110,6 +120,8 @@ const EMPTY_HOST_TOKEN = '\u0000EMPTY_HOST';
 export class WebappHomeDataService {
   /** Cached across calls: whether the target instance supports the virtual node concept (SLE only). */
   private virtualNodesSupported: boolean | null = null;
+  private readonly systemsManagementClient: ReturnType<typeof createSystemsManagementClient>;
+  private readonly testMonitorClient: ReturnType<typeof createTestMonitorClient>;
 
   // Caps concurrent in-flight requests so aggressive parallelism doesn't trigger 429s.
   private readonly maxConcurrentRequests = 6;
@@ -117,7 +129,26 @@ export class WebappHomeDataService {
   private readonly requestWaiters: (() => void)[] = [];
   readonly isDemoMode = this.isLocalDemoRequested();
 
-  constructor(private readonly context: SystemLinkContextService) {}
+  constructor(private readonly context: SystemLinkContextService) {
+    const fetchWithContext: typeof fetch = (input, init) =>
+      this.fetchWithRetry(
+        input,
+        this.context.buildRequestInit({
+          ...init,
+          headers: init?.headers ?? (input instanceof Request ? input.headers : undefined),
+        }),
+      );
+
+    this.systemsManagementClient = createSystemsManagementClient(
+      createSystemsManagementConfig({ baseUrl: context.origin, fetch: fetchWithContext }),
+    );
+    this.testMonitorClient = createTestMonitorClient(
+      createTestMonitorConfig({
+        baseUrl: `${context.origin}/nitestmonitor`,
+        fetch: fetchWithContext,
+      }),
+    );
+  }
 
   async load(): Promise<HomePageModel> {
     if (this.isDemoMode) {
@@ -366,24 +397,18 @@ export class WebappHomeDataService {
   }
 
   private async queryAllSystems(filter: string, projection: string): Promise<RawSystem[]> {
-    const url = this.context.buildApiUrl('nisysmgmt/v1/query-systems');
     const all: RawSystem[] = [];
     let skip = 0;
 
     for (;;) {
-      const response = await this.fetchWithRetry(
-        url,
-        this.context.buildRequestInit({
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ filter, skip, take: PAGE_SIZE, projection }),
-        }),
-      );
-      if (!response.ok) {
-        throw new Error(`query-systems failed (${response.status})`);
+      const response = await querySystems({
+        client: this.systemsManagementClient,
+        body: { filter, skip, take: PAGE_SIZE, projection },
+      });
+      if (!response.response.ok) {
+        throw new Error(`query-systems failed (${response.response.status})`);
       }
-      const payload = (await response.json()) as { data?: RawSystem[] };
-      const data = payload.data ?? [];
+      const data = this.systemRecordsFromResponse(response.data);
       if (data.length === 0) {
         break;
       }
@@ -394,56 +419,58 @@ export class WebappHomeDataService {
     return all;
   }
 
+  private systemRecordsFromResponse(payload: unknown): RawSystem[] {
+    if (Array.isArray(payload)) {
+      return payload.flatMap((entry) => {
+        if (!entry || typeof entry !== 'object') {
+          return [];
+        }
+        const data = (entry as { data?: unknown }).data;
+        return data && typeof data === 'object' ? [data as RawSystem] : [];
+      });
+    }
+
+    if (!payload || typeof payload !== 'object') {
+      return [];
+    }
+    const data = (payload as { data?: unknown }).data;
+    return Array.isArray(data) ? (data as RawSystem[]) : [];
+  }
+
   /** Probes whether the connected instance supports querying virtual node state (SLE only). */
   private async detectVirtualNodeSupport(): Promise<boolean> {
     if (this.virtualNodesSupported !== null) {
       return this.virtualNodesSupported;
     }
 
-    const url = this.context.buildApiUrl('nisysmgmt/v1/query-systems');
-    const response = await this.fetchWithRetry(
-      url,
-      this.context.buildRequestInit({
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filter: VIRTUAL_FILTER, skip: 0, take: 1, projection: VIRTUAL_PROJECTION }),
-      }),
-    );
-    this.virtualNodesSupported = response.ok;
-    return this.virtualNodesSupported;
+    const response = await querySystems({
+      client: this.systemsManagementClient,
+      body: { filter: VIRTUAL_FILTER, skip: 0, take: 1, projection: VIRTUAL_PROJECTION },
+    });
+    const supported = response.response.ok;
+    this.virtualNodesSupported = supported;
+    return supported;
   }
 
   private async queryResultIdentities(windowStart: Date, snapshot: Date): Promise<ResultIdentity[]> {
-    const url = this.context.buildApiUrl('nitestmonitor/v2/query-results');
     const filter = `updatedAt >= "${windowStart.toISOString()}" and updatedAt <= "${snapshot.toISOString()}"`;
     const identities: ResultIdentity[] = [];
     let continuationToken: string | undefined;
     const seenContinuationTokens = new Set<string>();
 
     for (;;) {
-      const response = await this.fetchWithRetry(
-        url,
-        this.context.buildRequestInit({
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            filter,
-            take: PAGE_SIZE,
-            projection: ['HOST_NAME', 'SYSTEM_ID'],
-            continuationToken,
-          }),
-        }),
-      );
-      if (!response.ok) {
-        throw new Error(`query-results failed (${response.status})`);
+      const response = await this.queryTestResults({
+        filter,
+        take: PAGE_SIZE,
+        projection: ['HOST_NAME', 'SYSTEM_ID'],
+        continuationToken,
+      });
+      if (!response.response.ok) {
+        throw new Error(`query-results failed (${response.response.status})`);
       }
-      const payload = (await response.json()) as {
-        results?: ResultIdentity[];
-        continuationToken?: string;
-      };
-      const results = payload.results ?? [];
+      const results = (response.data?.results ?? []) as ResultIdentity[];
       identities.push(...results);
-      const nextToken = payload.continuationToken;
+      const nextToken = response.data?.continuationToken;
       if (!nextToken || results.length === 0 || seenContinuationTokens.has(nextToken)) {
         break;
       }
@@ -492,7 +519,6 @@ export class WebappHomeDataService {
       return;
     }
 
-    const url = this.context.buildApiUrl('nitestmonitor/v2/query-results');
     const filter = `updatedAt >= "${windowStart.toISOString()}" and updatedAt <= "${windowEnd.toISOString()}"`;
     // Latest result (id + timestamp) per host; captured for every host seen, not just targets.
     const latestByHost = new Map<string, { ts: Date | null; id?: string }>();
@@ -501,29 +527,18 @@ export class WebappHomeDataService {
     const seenContinuationTokens = new Set<string>();
 
     for (;;) {
-      const response = await this.fetchWithRetry(
-        url,
-        this.context.buildRequestInit({
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            filter,
-            orderBy: 'UPDATED_AT',
-            descending: true,
-            take: 1000,
-            projection: ['HOST_NAME', 'STARTED_AT', 'UPDATED_AT', 'ID'],
-            continuationToken,
-          }),
-        }),
-      );
-      if (!response.ok) {
+      const response = await this.queryTestResults({
+        filter,
+        orderBy: 'UPDATED_AT',
+        descending: true,
+        take: 1000,
+        projection: ['HOST_NAME', 'STARTED_AT', 'UPDATED_AT', 'ID'],
+        continuationToken,
+      });
+      if (!response.response.ok) {
         break;
       }
-      const payload = (await response.json()) as {
-        results?: { hostName?: string; startedAt?: string; updatedAt?: string; id?: string }[];
-        continuationToken?: string;
-      };
-      const results = payload.results ?? [];
+      const results = response.data?.results ?? [];
       for (const result of results) {
         // Results are newest-first, so the first hit per host is its latest.
         const key = (result.hostName ?? '').trim().toUpperCase();
@@ -535,7 +550,7 @@ export class WebappHomeDataService {
           targetsFound++;
         }
       }
-      const nextToken = payload.continuationToken;
+      const nextToken = response.data?.continuationToken;
       if (
         !nextToken ||
         results.length === 0 ||
@@ -590,34 +605,27 @@ export class WebappHomeDataService {
     windowStart: Date,
     windowEnd: Date,
   ): Promise<{ timestamp: Date | null; id: string | null }> {
-    const url = this.context.buildApiUrl('nitestmonitor/v2/query-results');
     const filter =
       `${hostFilter} ` +
       `and updatedAt >= "${windowStart.toISOString()}" and updatedAt <= "${windowEnd.toISOString()}"`;
-    const response = await this.fetchWithRetry(
-      url,
-      this.context.buildRequestInit({
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          filter,
-          orderBy: 'UPDATED_AT',
-          descending: true,
-          take: 1,
-          projection: ['ID', 'UPDATED_AT', 'STARTED_AT'],
-        }),
-      }),
-    );
-    if (!response.ok) {
+    const response = await this.queryTestResults({
+      filter,
+      orderBy: 'UPDATED_AT',
+      descending: true,
+      take: 1,
+      projection: ['ID', 'UPDATED_AT', 'STARTED_AT'],
+    });
+    if (!response.response.ok) {
       return { timestamp: null, id: null };
     }
-    const payload = (await response.json()) as {
-      results?: { id?: string; updatedAt?: string; startedAt?: string }[];
-    };
-    const result = payload.results?.[0];
+    const result = response.data?.results?.[0];
     return result
       ? { timestamp: this.parseDate(result.updatedAt ?? result.startedAt), id: result.id ?? null }
       : { timestamp: null, id: null };
+  }
+
+  private queryTestResults(body: ResultsAdvancedQuery) {
+    return queryResultsV2({ client: this.testMonitorClient, body });
   }
 
   private toDetailRow(record: StatusRecord, index: number): NodeDetailRow {
@@ -644,7 +652,7 @@ export class WebappHomeDataService {
   }
 
   /** Fetch wrapper that retries on 429/503 with backoff (honoring Retry-After). */
-  private async fetchWithRetry(url: string, init: RequestInit, maxRetries = 6): Promise<Response> {
+  private async fetchWithRetry(url: RequestInfo | URL, init: RequestInit, maxRetries = 6): Promise<Response> {
     for (let attempt = 0; ; attempt++) {
       const response = await this.withSlot(() => fetch(url, init));
       if ((response.status !== 429 && response.status !== 503) || attempt >= maxRetries) {
