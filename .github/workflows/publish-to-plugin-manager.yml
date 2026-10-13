@@ -124,7 +124,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           RELEASE_TAG: ${{ matrix.tag }}
-          SOURCE_COMMIT: ${{ github.event.inputs.source_commit || '' }}
+          SOURCE_COMMIT: ${{ github.event.inputs.source_commit || (github.event_name == 'push' && github.sha) || '' }}
           EXPECTED_NIPKG_NAME: ${{ steps.artifacts.outputs.nipkg_name }}
         working-directory: ${{ matrix.path }}
         run: |
