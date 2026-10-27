@@ -51,7 +51,8 @@ services:
 npm run start
 ```
 
-Open <http://localhost:4175/>. The start server serves the unbuilt `webapp/`
+Open <http://localhost:4175/>. The start server binds only to IPv4 loopback
+(`127.0.0.1`) and serves the unbuilt `webapp/`
 directory and redirects to `?demo=1`, so changes to the source files are picked
 up on refresh. The demo includes passing and failing ATML files plus a generic
 XML file. Uploading, importing, replacing, deleting, metadata updates, and
@@ -67,3 +68,11 @@ PORT=4176 npm run start
 The repository root also forwards `npm run start` to this plugin. Hosted
 SystemLink deployments do not enable the mock unless the page is explicitly
 opened with `?demo=1`.
+
+The vendored Nimble bundle must match the pinned `@ni/nimble-components` version.
+After updating that dependency, refresh it from the repository root:
+
+```sh
+cp node_modules/@ni/nimble-components/dist/all-components-bundle.min.js \
+  plugins/atml-file-manager/webapp/nimble/all-components-bundle.min.js
+```

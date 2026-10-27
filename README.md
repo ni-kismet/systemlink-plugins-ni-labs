@@ -78,6 +78,10 @@ That token is used only to dispatch the submission event to the app-store reposi
 
 Install dependencies at the repo root:
 
+Use Node.js 24 or newer and npm 11.19.1 (also pinned in the publishing workflow).
+Angular and its NI wrapper libraries stay on their compatible Angular 20 release
+lines; the lockfile includes their latest compatible security patches.
+
 ```bash
 npm ci
 ```

@@ -4,6 +4,10 @@ A SystemLink webapp that probes SystemLink service endpoints and visualizes thei
 health, availability, and latency in a read-only dashboard built with Angular and
 Nimble components.
 
+Builds and Karma tests use `@angular/build` rather than the legacy Webpack
+builder, avoiding its vulnerable development-server dependency chain. The build
+still writes directly to `dist/systemlink-health-viewer` for NI packaging.
+
 ## Features
 
 - **Service summary cards** — total, functional, and failed services, overall
