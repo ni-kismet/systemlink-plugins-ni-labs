@@ -115,6 +115,7 @@ const VIRTUAL_PROJECTION =
 // can build the correct query-results filter for them.
 const NULL_HOST_TOKEN = '\u0000NULL_HOST';
 const EMPTY_HOST_TOKEN = '\u0000EMPTY_HOST';
+type ResultUrlPlatform = 'SLE' | 'SLS' | 'unknown';
 
 /** Medium date + time in the browser's time zone and SystemLink language, like SystemLink tables. */
 function formatTimestamp(date: Date | null, locale: string): string {
@@ -127,6 +128,8 @@ export class WebappHomeDataService {
   private virtualNodesSupported: boolean | null = null;
   private readonly systemsManagementClient: ReturnType<typeof createSystemsManagementClient>;
   private readonly testMonitorClient: ReturnType<typeof createTestMonitorClient>;
+  private resultUrlPlatform: ResultUrlPlatform | null = null;
+  private queryResultsApiSupported = false;
 
   // Caps concurrent in-flight requests so aggressive parallelism doesn't trigger 429s.
   private readonly maxConcurrentRequests = 6;
@@ -186,6 +189,7 @@ export class WebappHomeDataService {
     // Kick off every query that doesn't depend on virtual-node support so the systems queries and
     // the per-month result queries all run concurrently instead of in sequential batches.
     const fleetPromise = this.queryAllSystems('id != null', 'new(id)');
+    const slsPlatformPromise = this.detectSlsPlatform();
     const resultIdentitiesPromise = Promise.all(
       windows.map((w) => this.queryResultIdentities(w.windowStart, w.snapshot)),
     );
@@ -194,12 +198,14 @@ export class WebappHomeDataService {
     const managedFilter = virtualSupported ? MANAGED_FILTER_WITH_VIRTUAL : MANAGED_FILTER_NO_VIRTUAL;
     const managedProjection = virtualSupported ? MANAGED_PROJECTION_WITH_STATE : MANAGED_PROJECTION_NO_STATE;
 
-    const [managedRaw, virtualRaw, fleetRaw, resultIdentitiesByMonth] = await Promise.all([
+    const [managedRaw, virtualRaw, fleetRaw, resultIdentitiesByMonth, isSlsPlatform] = await Promise.all([
       this.queryAllSystems(managedFilter, managedProjection),
       virtualSupported ? this.queryAllSystems(VIRTUAL_FILTER, VIRTUAL_PROJECTION) : Promise.resolve([]),
       fleetPromise,
       resultIdentitiesPromise,
+      slsPlatformPromise,
     ]);
+    this.resultUrlPlatform = isSlsPlatform ? 'SLS' : this.queryResultsApiSupported ? 'SLE' : 'unknown';
     // Every real system id; a SYSTEM_ID on a result that isn't here is an orphaned/misclassified host.
     const fleetIds = new Set(
       fleetRaw
@@ -469,6 +475,27 @@ export class WebappHomeDataService {
     return supported;
   }
 
+  private async detectSlsPlatform(): Promise<boolean> {
+    const slsResponse = await this.fetchWithRetry(
+      this.context.buildApiUrl('nitagrule/'),
+      this.context.buildRequestInit({ headers: { Accept: 'application/json' } }),
+    );
+    if (slsResponse.status === 200) {
+      const payload: unknown = await slsResponse.json();
+      if (
+        typeof payload === 'object' &&
+        payload !== null &&
+        'v1' in payload &&
+        typeof payload.v1 === 'object' &&
+        payload.v1 !== null &&
+        'version' in payload
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   private async queryResultIdentities(windowStart: Date, snapshot: Date): Promise<ResultIdentity[]> {
     const filter = `updatedAt >= "${windowStart.toISOString()}" and updatedAt <= "${snapshot.toISOString()}"`;
     const identities: ResultIdentity[] = [];
@@ -486,6 +513,7 @@ export class WebappHomeDataService {
         throw new Error($localize`query-results failed (${response.response.status}:status:)`);
       }
       const results = (response.data?.results ?? []) as ResultIdentity[];
+      this.queryResultsApiSupported ||= Array.isArray(response.data?.results);
       identities.push(...results);
       const nextToken = response.data?.continuationToken;
       if (!nextToken || results.length === 0 || seenContinuationTokens.has(nextToken)) {
@@ -613,7 +641,13 @@ export class WebappHomeDataService {
   }
 
   private resultUrlFromId(id: string): string {
-    return `${this.context.origin}/testinsights/results/result/${id}`;
+    if (this.resultUrlPlatform === 'SLE') {
+      return `${this.context.origin}/testinsights/results/result/${id}`;
+    }
+    if (this.resultUrlPlatform === 'SLS') {
+      return `${this.context.origin}/#testmonitor/testresults/testresult/${id}`;
+    }
+    return '';
   }
 
   /** Latest result (timestamp + id) for a hostName/systemId predicate, bounded to the window. */
