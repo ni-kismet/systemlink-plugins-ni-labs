@@ -1,6 +1,6 @@
 {
   "name": "@ni-kismet/node-license-management",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "license": "MIT",
   "description": "A read-only SystemLink web app that reports managed, unmanaged, inactive, and virtual node counts with a 12-month trend and per-node detail.",
