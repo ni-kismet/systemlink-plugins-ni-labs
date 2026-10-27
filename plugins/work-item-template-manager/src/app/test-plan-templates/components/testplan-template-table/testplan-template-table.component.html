@@ -1,0 +1,174 @@
+@if (selectedIds$ | async; as selectedIds) {
+  <div class="toolbar">
+    @if (selectedIds.size > 0) {
+      <div class="toolbar-actions">
+        @if (selectedIds.size === 1) {
+          <nimble-button
+            appearance="ghost"
+            [disabled]="!canOnSelection(actions.update, selectedIds)"
+            [title]="canOnSelection(actions.update, selectedIds) ? '' : noUpdatePrivilege"
+            (click)="onEdit()"
+          >
+            <nimble-icon-pencil slot="start"></nimble-icon-pencil>
+            <ng-container i18n>Edit</ng-container>
+          </nimble-button>
+          <nimble-button
+            appearance="ghost"
+            [disabled]="!canCreate()"
+            [title]="canCreate() ? '' : noCreatePrivilege"
+            (click)="onDuplicate()"
+          >
+            <nimble-icon-clone slot="start"></nimble-icon-clone>
+            <ng-container i18n>Duplicate</ng-container>
+          </nimble-button>
+        }
+        <nimble-button
+          appearance="ghost"
+          [disabled]="!canOnSelection(actions.delete, selectedIds)"
+          [title]="canOnSelection(actions.delete, selectedIds) ? '' : noDeletePrivilege"
+          (click)="onDelete()"
+        >
+          <nimble-icon-xmark slot="start"></nimble-icon-xmark>
+          <ng-container i18n>Delete</ng-container>
+        </nimble-button>
+      </div>
+      <div class="selection-info">
+        <nimble-button appearance="ghost" class="clear-button" (click)="clearSelection()">
+          <ng-container i18n>{{ selectedIds.size }} selected</ng-container>
+          <nimble-icon-xmark slot="start"></nimble-icon-xmark>
+        </nimble-button>
+      </div>
+    } @else {
+      @if (canCreate()) {
+        <nimble-button appearance="outline" appearance-variant="accent" (click)="onCreate()">
+          <ng-container i18n>Create work item template</ng-container>
+        </nimble-button>
+      }
+      <nimble-text-field
+        #searchField
+        class="search-field"
+        placeholder="Search work item templates"
+        i18n-placeholder
+        type="text"
+        appearance="underline"
+        autocomplete="off"
+        autocapitalize="off"
+        autocorrect="off"
+        [spellcheck]="false"
+        (input)="onSearchInput($event)"
+      >
+        <nimble-icon-magnifying-glass slot="start"></nimble-icon-magnifying-glass>
+
+        @if (searchText) {
+          <nimble-button
+            slot="actions"
+            tabindex="-1"
+            aria-hidden="true"
+            appearance="ghost"
+            content-hidden
+            title="Clear"
+            i18n-title
+            (click)="onClickClear()"
+          >
+            <nimble-icon-xmark slot="start"></nimble-icon-xmark>
+          </nimble-button>
+        }
+      </nimble-text-field>
+      <nimble-button
+        appearance="ghost"
+        class="config-button"
+        content-hidden
+        title="Grid Configuration"
+        i18n-title
+        (click)="onOpenGridConfig()"
+      >
+        <nimble-icon-three-vertical-lines slot="start"></nimble-icon-three-vertical-lines>
+      </nimble-button>
+    }
+  </div>
+
+  <hr class="divider" />
+
+  <div class="table-label">
+    <nimble-icon-filter></nimble-icon-filter>
+    <ng-container i18n>Showing {{ (tableData$ | async)?.length }} of {{ totalCount$ | async }} most recently updated work item templates</ng-container>
+  </div>
+  <div class="table-shell">
+    <nimble-table
+      class="templates-table"
+      [data$]="tableData$"
+      id-field-name="id"
+      selection-mode="multiple"
+      (selection-change)="onSelectionChange($event)"
+      (column-configuration-change)="onColumnConfigChange($event)"
+    >
+      @for (column of (renderedColumns$ | async) ?? []; track column.id) {
+        @if (column.type === 'date') {
+          <nimble-table-column-date-text
+            [attr.column-id]="column.id"
+            [attr.field-name]="column.fieldName"
+            [attr.column-hidden]="column.hidden || null"
+            [attr.group-index]="column.groupIndex"
+            [attr.sort-direction]="column.sortDirection"
+            [attr.sort-index]="column.sortIndex"
+            [grouping-disabled]="false"
+            format="custom"
+            custom-date-style="medium"
+            custom-time-style="medium"
+            fractional-width="1"
+            min-pixel-width="120"
+          >
+            {{ column.label }}
+          </nimble-table-column-date-text>
+        } @else {
+          <nimble-table-column-text
+            [attr.column-id]="column.id"
+            [attr.field-name]="column.fieldName"
+            [attr.column-hidden]="column.hidden || null"
+            [attr.group-index]="column.groupIndex"
+            [attr.sort-direction]="column.sortDirection"
+            [attr.sort-index]="column.sortIndex"
+            [grouping-disabled]="false"
+            fractional-width="1"
+            min-pixel-width="120"
+          >
+            {{ column.label }}
+          </nimble-table-column-text>
+        }
+      }
+    </nimble-table>
+
+    @if (isLoading$ | async) {
+      <div class="spinner-overlay">
+        <nimble-spinner appearance="accent"></nimble-spinner>
+      </div>
+    }
+  </div>
+
+  <app-grid-config-slideout
+    [allColumns]="(allColumns$ | async)!"
+    [visibleColumnIds]="(visibleColumnIds$ | async)!"
+    [groupByIds]="(groupByIds$ | async)!"
+    (configUpdated)="onGridConfigChange($event)"
+  ></app-grid-config-slideout>
+
+  <app-testplan-create-edit-slideout></app-testplan-create-edit-slideout>
+
+  <app-testplan-duplicate-slideout></app-testplan-duplicate-slideout>
+
+  <nimble-dialog #deleteDialog>
+    <span slot="title"><ng-container i18n>{selectedIds.size, plural, =1 {Delete template?} other {Delete templates?}}</ng-container></span>
+    <ng-container i18n>{selectedIds.size, plural, =1 {Are you sure you want to permanently delete the selected template?} other {Are you sure you want to permanently delete the selected templates?}}</ng-container>
+    <nimble-button slot="footer" appearance="ghost" (click)="onCancelDelete()">
+      <ng-container i18n>Cancel</ng-container>
+    </nimble-button>
+    <nimble-button
+      slot="footer"
+      appearance="outline"
+      appearance-variant="accent"
+      (click)="onConfirmDelete()"
+    >
+      <ng-container i18n>Delete</ng-container>
+    </nimble-button>
+  </nimble-dialog>
+}

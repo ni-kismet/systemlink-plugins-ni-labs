@@ -1,0 +1,16 @@
+{
+  "package": "work-item-template-manager",
+  "version": "0.1.0",
+  "displayName": "Work Item Template Manager",
+  "description": "Create, edit, filter, group, and organize SystemLink work item (test plan) templates, including file attachments and dashboard configuration.",
+  "section": "Lab Management",
+  "maintainer": "Mike Castaneda <mike.castaneda@emerson.com>",
+  "license": "MIT",
+  "xbPlugin": "webapp",
+  "homepage": "https://github.com/ni-kismet/systemlink-plugins-ni-labs",
+  "slPluginManagerTags": "work item,test plan,templates,work order,test management",
+  "slPluginManagerMinServerVersion": "2024 Q4",
+  "iconFile": "icon.svg",
+  "buildDir": "dist/work-item-template-manager/browser",
+  "buildCommand": "npm run build"
+}

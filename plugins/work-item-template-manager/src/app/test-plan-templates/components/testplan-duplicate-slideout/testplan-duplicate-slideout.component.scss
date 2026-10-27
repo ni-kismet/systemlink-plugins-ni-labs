@@ -1,0 +1,61 @@
+@use '../../../../styles/variables' as *;
+@use '@ni/nimble-components/dist/fonts' as *;
+@use '@ni/nimble-angular/styles/tokens' as *;
+
+// Slide-out layout dimensions (mirrors the create/edit slideout)
+$slide-out-padding-inline: 30px;
+$slide-out-header-block-start: 35px;
+$slide-out-content-gap: 15px;
+$slide-out-footer-button-min-width: 110px;
+
+:host {
+  display: contents;
+}
+
+.drawer {
+  --ni-nimble-internal-drawer-width: max(375px, min(100vw, 480px));
+}
+
+.header-container {
+  display: flex;
+  padding: $slide-out-header-block-start $slide-out-padding-inline $slide-out-content-gap;
+
+  h3 {
+    color: $ni-nimble-title-plus-1-font-color;
+    font: $ni-nimble-title-plus-1-font;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.body {
+  flex: 1;
+  overflow-y: auto;
+  padding: $slide-out-content-gap $slide-out-padding-inline $slide-out-padding-inline;
+  position: relative;
+}
+
+.footer {
+  display: flex;
+  gap: $ni-nimble-standard-padding;
+  justify-content: flex-end;
+  padding: $slide-out-padding-inline;
+
+  .footer-button {
+    min-width: $slide-out-footer-button-min-width;
+  }
+}
+
+.step-form {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+
+  nimble-text-field,
+  nimble-text-area,
+  nimble-select {
+    width: 100%;
+  }
+}

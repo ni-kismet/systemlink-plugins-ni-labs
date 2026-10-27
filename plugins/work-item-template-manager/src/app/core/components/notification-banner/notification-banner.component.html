@@ -1,0 +1,21 @@
+<nimble-banner
+  *ngIf="notificationBannerInfo$ | async as notificationBannerInfo"
+  [severity]="notificationBannerInfo.severity"
+  [open]="!!notificationBannerInfo"
+  (toggle)="onBannerToggle($event)"
+  [prevent-dismiss]="notificationBannerInfo.preventDismiss"
+>
+  <span slot="title">{{ notificationBannerInfo.title }}</span>
+  {{ notificationBannerInfo.description }}
+  <nimble-anchor
+    *ngIf="notificationBannerInfo.anchor as anchorInfo"
+    slot="action"
+    [href]="anchorInfo.link"
+    target="_blank"
+  >
+    <span class="anchor-content">
+      {{ anchorInfo.linkContent }}
+      <nimble-icon-arrow-right-thin></nimble-icon-arrow-right-thin>
+    </span>
+  </nimble-anchor>
+</nimble-banner>

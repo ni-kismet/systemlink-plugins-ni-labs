@@ -1,0 +1,42 @@
+@use '../../../../styles/variables' as *;
+@use '@ni/nimble-components/dist/fonts' as *;
+@use '@ni/nimble-angular/styles/tokens' as *;
+
+:host {
+  display: contents;
+}
+
+.drawer {
+  --ni-nimble-drawer-width: max(23.4375rem, min(100vw, 49rem));
+}
+
+.header-container {
+  display: flex;
+  padding: 2.1875rem $spacing-lg $spacing-sm;
+
+  h3 {
+    color: $ni-nimble-title-plus-1-font-color;
+    font: $ni-nimble-title-plus-1-font;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.9375rem 1.875rem;
+}
+
+.footer {
+  display: flex;
+  gap: $ni-nimble-standard-padding;
+  justify-content: flex-end;
+  padding: 1.875rem;
+
+  .footer-button {
+    width: 6.875rem;
+  }
+}

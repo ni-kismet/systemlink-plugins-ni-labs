@@ -1,0 +1,11 @@
+@use '../../../../styles/grid-config-shared' as shared;
+@use '../../../../styles/variables' as *;
+@include shared.grid-config-shared-styles;
+
+.pinned {
+  opacity: $opacity-dimmed;
+}
+
+.columns-list {
+  overflow: hidden;
+}

@@ -1,0 +1,67 @@
+<nimble-drawer #drawer [location]="drawerLocation" class="drawer">
+  <div class="header-container">
+    <h3><ng-container i18n>Duplicate work item template</ng-container></h3>
+  </div>
+
+  <section class="body">
+    <form [formGroup]="form" class="step-form">
+      <nimble-select
+        #workspaceSelect
+        appearance="underline"
+        filter-mode="standard"
+        required-visible
+        [error-visible]="
+          form.controls.workspace.invalid && form.controls.workspace.touched
+        "
+        error-text="Workspace is required."
+        i18n-error-text
+        (change)="onWorkspaceChange($event)"
+      >
+        <ng-container i18n>Workspace</ng-container>
+        <nimble-list-option disabled hidden value="" i18n>Select workspace</nimble-list-option>
+        @for (workspace of workspaceOptions((workspaces$ | async) ?? []); track workspace.id) {
+          <nimble-list-option [value]="workspace.id">{{ workspace.name }}</nimble-list-option>
+        }
+      </nimble-select>
+
+      <nimble-text-field
+        formControlName="name"
+        appearance="underline"
+        placeholder="Enter name"
+        i18n-placeholder
+        required-visible
+        [error-visible]="form.controls.name.invalid && form.controls.name.touched"
+        error-text="Name is required."
+        i18n-error-text
+      >
+        <ng-container i18n>Name</ng-container>
+      </nimble-text-field>
+
+      <nimble-text-area
+        formControlName="description"
+        appearance="outline"
+        placeholder="Enter description"
+        i18n-placeholder
+        resize="vertical"
+      >
+        <ng-container i18n>Description</ng-container>
+      </nimble-text-area>
+    </form>
+  </section>
+
+  <footer class="footer">
+    <nimble-button class="footer-button" appearance="ghost" (click)="onCancel()">
+      <ng-container i18n>Cancel</ng-container>
+    </nimble-button>
+
+    <nimble-button
+      class="footer-button"
+      appearance="outline"
+      appearance-variant="accent"
+      [disabled]="isSaveDisabled()"
+      (click)="onDuplicate()"
+    >
+      <ng-container i18n>Duplicate</ng-container>
+    </nimble-button>
+  </footer>
+</nimble-drawer>

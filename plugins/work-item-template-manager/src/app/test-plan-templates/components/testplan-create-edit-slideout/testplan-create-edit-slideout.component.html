@@ -1,0 +1,1184 @@
+<nimble-drawer
+  #drawer
+  [location]="drawerLocation"
+  [preventDismiss]="isFilePickerActive"
+  class="drawer"
+>
+  <div class="header-container">
+    <h3>{{ drawerConfig().header }}</h3>
+  </div>
+
+  <nimble-tabs #formTabs class="form-tabs">
+    <nimble-tab
+      id="configuration-tab"
+      slot="tab"
+      (click)="onStepTabClick(CreateEditFormStep.TemplateDetails)"
+    ><ng-container i18n>Configuration</ng-container></nimble-tab>
+    <nimble-tab
+      id="filter-tab"
+      slot="tab"
+      (click)="onStepTabClick(CreateEditFormStep.Filter)"
+    ><ng-container i18n>Filter</ng-container></nimble-tab>
+    <nimble-tab
+      id="dashboard-tab"
+      slot="tab"
+      (click)="onStepTabClick(CreateEditFormStep.Dashboard)"
+    ><ng-container i18n>Dashboard</ng-container></nimble-tab>
+    <nimble-tab
+      id="file-upload-tab"
+      slot="tab"
+      (click)="onStepTabClick(CreateEditFormStep.FileUpload)"
+    ><ng-container i18n>File Upload</ng-container></nimble-tab>
+    @for (view of dynamicFormViews(); track view.key) {
+      <nimble-tab
+        [id]="getDynamicViewTabId(view)"
+        slot="tab"
+        (click)="onDynamicViewTabClick(view)"
+      >
+        {{ view.displayText }}
+      </nimble-tab>
+    }
+    <nimble-tab
+      id="properties-tab"
+      slot="tab"
+      (click)="onStepTabClick(CreateEditFormStep.FileConfiguration)"
+    ><ng-container i18n>Properties</ng-container></nimble-tab>
+
+    <nimble-tab-panel
+      slot="tabpanel"
+      role="tabpanel"
+      id="configuration-panel"
+      aria-labelledby="configuration-tab"
+      style="display: none;"
+    ></nimble-tab-panel>
+    <nimble-tab-panel
+      slot="tabpanel"
+      role="tabpanel"
+      id="filter-panel"
+      aria-labelledby="filter-tab"
+      style="display: none;"
+    ></nimble-tab-panel>
+    <nimble-tab-panel
+      slot="tabpanel"
+      role="tabpanel"
+      id="dashboard-panel"
+      aria-labelledby="dashboard-tab"
+      style="display: none;"
+    ></nimble-tab-panel>
+    <nimble-tab-panel
+      slot="tabpanel"
+      role="tabpanel"
+      id="file-upload-panel"
+      aria-labelledby="file-upload-tab"
+      style="display: none;"
+    ></nimble-tab-panel>
+    @for (view of dynamicFormViews(); track view.key) {
+      <nimble-tab-panel
+        slot="tabpanel"
+        role="tabpanel"
+        [id]="getDynamicViewTabId(view) + '-panel'"
+        [attr.aria-labelledby]="getDynamicViewTabId(view)"
+        style="display: none;"
+      ></nimble-tab-panel>
+    }
+    <nimble-tab-panel
+      slot="tabpanel"
+      role="tabpanel"
+      id="properties-panel"
+      aria-labelledby="properties-tab"
+      style="display: none;"
+    ></nimble-tab-panel>
+  </nimble-tabs>
+
+  <section class="body" #panelBody>
+    @if (isConfigDataLoading()) {
+      <div class="loading-overlay">
+        <nimble-spinner appearance="accent" class="loading-overlay__spinner"></nimble-spinner>
+      </div>
+    }
+    @if (isTemplateDetailsVisible()) {
+      <form [formGroup]="form.controls.templateDetails" class="step-form">
+        <div class="tab-panel-content">
+              @if (isEditMode()) {
+                <nimble-text-field [value]="currentTemplateId()" appearance="underline" disabled>
+                  <ng-container i18n>Template ID</ng-container>
+                </nimble-text-field>
+              }
+              <nimble-select
+                formControlName="type"
+                appearance="underline"
+                filter-mode="standard"
+                [disabled]="isTypeLockedInEditMode()"
+                required-visible
+                [error-visible]="
+                  form.controls.templateDetails.controls.type.invalid &&
+                  form.controls.templateDetails.controls.type.touched
+                "
+                error-text="Type is required."
+                i18n-error-text
+              >
+                <ng-container i18n>Type</ng-container>
+                <nimble-list-option disabled selected hidden value="" i18n>Select type</nimble-list-option>
+                @for (workItemType of (workItemTypes$ | async) ?? []; track workItemType.type) {
+                  <nimble-list-option [value]="workItemType.type">
+                    {{ getTypeLabel('' + workItemType.type) }}
+                  </nimble-list-option>
+                }
+              </nimble-select>
+
+              @if (getTypeDescription()) {
+                <div class="type-description-indicator">{{ getTypeDescription() }}</div>
+              }
+
+              <nimble-select
+                formControlName="workspace"
+                appearance="underline"
+                filter-mode="standard"
+                clearable
+                required-visible
+                [error-visible]="
+                  form.controls.templateDetails.controls.workspace.invalid &&
+                  form.controls.templateDetails.controls.workspace.touched
+                "
+                error-text="Workspace is required."
+                i18n-error-text
+              >
+                <ng-container i18n>Workspace</ng-container>
+                <nimble-list-option disabled selected hidden value="" i18n
+                  >Select workspace</nimble-list-option
+                >
+                @for (workspace of workspaceOptions((workspaces$ | async) ?? []); track workspace.id) {
+                  <nimble-list-option [value]="workspace.id">{{
+                    workspace.name
+                  }}</nimble-list-option>
+                }
+              </nimble-select>
+
+              <nimble-text-field
+                formControlName="name"
+                appearance="underline"
+                placeholder="Enter name"
+                i18n-placeholder
+                required-visible
+                [error-visible]="
+                  form.controls.templateDetails.controls.name.invalid &&
+                  form.controls.templateDetails.controls.name.touched
+                "
+                error-text="Name is required."
+                i18n-error-text
+              >
+                <ng-container i18n>Name</ng-container>
+              </nimble-text-field>
+
+              <div class="template-group-combobox-container">
+                <nimble-combobox
+                  #templateGroupCombobox
+                  formControlName="templateGroup"
+                  appearance="underline"
+                  autocomplete="both"
+                  placeholder="Enter or select group"
+                  i18n-placeholder
+                  required-visible
+                  [error-visible]="
+                    form.controls.templateDetails.controls.templateGroup.invalid &&
+                    form.controls.templateDetails.controls.templateGroup.touched
+                  "
+                  error-text="Group is required."
+                  i18n-error-text
+                  (input)="onTemplateGroupChange($event)"
+                  (change)="onTemplateGroupChange($event)"
+                >
+                  <ng-container i18n>Group</ng-container>
+                  @for (group of (templateGroups$ | async) ?? []; track group) {
+                    <nimble-list-option [ngValue]="group">{{ group }}</nimble-list-option>
+                  }
+                </nimble-combobox>
+
+                @if (form.controls.templateDetails.controls.templateGroup.value) {
+                  <nimble-button
+                    class="template-group-clear-icon"
+                    appearance="ghost"
+                    title="Clear group"
+                    i18n-title
+                    (click)="clearTemplateGroup()"
+                  >
+                    <nimble-icon-xmark slot="start"></nimble-icon-xmark>
+                  </nimble-button>
+                }
+              </div>
+
+              @if (!isControlDisabled('PART_NUMBER')) {
+                <div class="multi-select-section">
+                  <span class="multi-select-label"><ng-container i18n>Product family</ng-container></span>
+                  @if (selectedProductFamilies().length > 0) {
+                    <div class="chip-container">
+                      @for (family of selectedProductFamilies(); track family) {
+                        <nimble-chip
+                          appearance="outline"
+                          removable
+                          (remove)="removeProductFamily(family)"
+                        >
+                          {{ family }}
+                        </nimble-chip>
+                      }
+                    </div>
+                    <nimble-button
+                      appearance="ghost"
+                      [disabled]="
+                        !form.controls.templateDetails.controls.workspace.value ||
+                        !isPartNumberSelectionEnabled()
+                      "
+                      (click)="openProductFamilyDialog()"
+                    >
+                      <nimble-icon-pencil slot="start"></nimble-icon-pencil>
+                      <ng-container i18n>Edit product families</ng-container>
+                    </nimble-button>
+                  } @else {
+                    <nimble-button
+                      appearance="ghost"
+                      [disabled]="
+                        !form.controls.templateDetails.controls.workspace.value ||
+                        !isPartNumberSelectionEnabled()
+                      "
+                      (click)="openProductFamilyDialog()"
+                    >
+                      <nimble-icon-add slot="start"></nimble-icon-add>
+                      <ng-container i18n>Select product families</ng-container>
+                    </nimble-button>
+                  }
+                </div>
+
+                <div class="multi-select-section">
+                  <span class="multi-select-label"><ng-container i18n>Product</ng-container>@if (isFieldMandatory('PART_NUMBER')) {<span class="required-indicator" aria-hidden="true">*</span>}</span>
+                  @if (selectedProducts().length > 0) {
+                    <div class="chip-container">
+                      @for (product of selectedProducts(); track product.partNumber) {
+                        <nimble-chip
+                          appearance="outline"
+                          removable
+                          (remove)="removeProduct(product.partNumber)"
+                        >
+                          {{ product.displayName }}
+                        </nimble-chip>
+                      }
+                    </div>
+                    <nimble-button
+                      appearance="ghost"
+                      [disabled]="
+                        !form.controls.templateDetails.controls.workspace.value ||
+                        !isPartNumberSelectionEnabled()
+                      "
+                      (click)="openProductDialog()"
+                    >
+                      <nimble-icon-pencil slot="start"></nimble-icon-pencil>
+                      <ng-container i18n>Edit products</ng-container>
+                    </nimble-button>
+                  } @else {
+                    <nimble-button
+                      appearance="ghost"
+                      [disabled]="
+                        !form.controls.templateDetails.controls.workspace.value ||
+                        !isPartNumberSelectionEnabled()
+                      "
+                      (click)="openProductDialog()"
+                    >
+                      <nimble-icon-add slot="start"></nimble-icon-add>
+                      <ng-container i18n>Select products</ng-container>
+                    </nimble-button>
+                  }
+                  @if (hasRequiredError(form.controls.templateDetails.controls.partNumbers)) {
+                    <span class="multi-select-error" i18n>This field is required.</span>
+                  }
+                </div>
+              }
+
+              <nimble-select
+                formControlName="workflowId"
+                appearance="underline"
+                filter-mode="standard"
+                clearable
+                [disabled]="!form.controls.templateDetails.controls.workspace.value"
+              >
+                <ng-container i18n>Workflow</ng-container>
+                <nimble-list-option disabled selected hidden value="" i18n
+                  >Select workflow</nimble-list-option
+                >
+                @for (workflow of (workflows$ | async) ?? []; track workflow.id) {
+                  <nimble-list-option [value]="workflow.id"
+                    >{{ workflow.name }} ({{ workflow.id }})</nimble-list-option
+                  >
+                }
+              </nimble-select>
+
+              @if (!isControlDisabled('TEST_PROGRAM')) {
+                <div class="test-program-combobox-container">
+                  <nimble-combobox
+                    #testProgramCombobox
+                    formControlName="testProgram"
+                    appearance="underline"
+                    autocomplete="both"
+                    placeholder="Enter or select test program"
+                    i18n-placeholder
+                    [disabled]="!form.controls.templateDetails.controls.workspace.value"
+                    [required-visible]="isFieldMandatory('TEST_PROGRAM')"
+                    [error-visible]="hasRequiredError(form.controls.templateDetails.controls.testProgram)"
+                    error-text="This field is required."
+                    i18n-error-text
+                    (input)="onTestProgramChange($event)"
+                    (change)="onTestProgramChange($event)"
+                  >
+                    <ng-container i18n>Test program</ng-container>
+                    @for (testProgram of (testPrograms$ | async) ?? []; track testProgram) {
+                      <nimble-list-option [ngValue]="testProgram">{{ testProgram }}</nimble-list-option>
+                    }
+                  </nimble-combobox>
+
+                  @if (form.controls.templateDetails.controls.testProgram.value) {
+                    <nimble-button
+                      class="test-program-clear-icon"
+                      appearance="ghost"
+                      title="Clear test program"
+                      i18n-title
+                      (click)="clearTestProgram()"
+                    >
+                      <nimble-icon-xmark slot="start"></nimble-icon-xmark>
+                    </nimble-button>
+                  }
+                </div>
+              }
+
+              @if (!isControlDisabled('TIMELINE.ESTIMATED_DURATION_IN_SECONDS')) {
+                <nimble-text-field
+                  formControlName="estimatedDurationInSeconds"
+                  appearance="underline"
+                  inputmode="numeric"
+                  placeholder="Auto-populated from latest result or enter manually"
+                  i18n-placeholder
+                  [required-visible]="isFieldMandatory('TIMELINE.ESTIMATED_DURATION_IN_SECONDS')"
+                  [error-visible]="hasRequiredError(form.controls.templateDetails.controls.estimatedDurationInSeconds)"
+                  error-text="This field is required."
+                  i18n-error-text
+                >
+                  <ng-container i18n>Estimated duration (seconds)</ng-container>
+                </nimble-text-field>
+              }
+
+              <nimble-text-field
+                formControlName="summary"
+                appearance="underline"
+                placeholder="Enter summary"
+                i18n-placeholder
+              >
+                <ng-container i18n>Summary</ng-container>
+              </nimble-text-field>
+
+              @if (!isControlDisabled('DESCRIPTION')) {
+                <nimble-text-area
+                  formControlName="description"
+                  appearance="outline"
+                  placeholder="Enter description"
+                  i18n-placeholder
+                  resize="vertical"
+                  [required-visible]="isFieldMandatory('DESCRIPTION')"
+                  [error-visible]="hasRequiredError(form.controls.templateDetails.controls.description)"
+                  error-text="This field is required."
+                  i18n-error-text
+                >
+                  <ng-container i18n>Description</ng-container>
+                </nimble-text-area>
+              }
+
+        </div>
+      </form>
+    }
+
+    @if (isFilterVisible()) {
+      <form [formGroup]="form.controls.templateDetails" class="step-form">
+        <div class="filters-section">
+          <h4 class="section-heading">
+            <ng-container i18n>Filters</ng-container>
+            <nimble-icon-info-circle id="filters-info" class="info-icon"></nimble-icon-info-circle>
+            <nimble-tooltip anchor="filters-info">
+              @if (filterLanguage() === 'LUCENE') {
+                <ng-container i18n>Filter expressions to scope the test plan to specific systems or DUTs. Use field names, quoted values, and AND, OR, or NOT (e.g., systems: {{ luceneTooltipExamples.systems }}; DUTs: {{ luceneTooltipExamples.duts }}).</ng-container>
+              } @else {
+                <ng-container i18n>Filter expressions to scope the test plan to specific systems or DUTs. Use property names and logical operators (e.g., systems: grains.data.serialnumber = "01E82ED0"; DUTs: ModelName = "cRIO-9045" &amp;&amp; SerialNumber = "01E82ED0").</ng-container>
+              }
+            </nimble-tooltip>
+          </h4>
+
+          @if (!hasSupportedFilters()) {
+            <div class="filters-empty-text"><ng-container i18n>No filters are supported by the selected Work Item type.</ng-container></div>
+          }
+
+          @if (!isControlDisabled('RESOURCES.SYSTEMS')) {
+            <div class="system-filter-input-row" style="display:flex;align-items:flex-end;gap:8px;">
+              <nimble-text-field
+                formControlName="systemFilter"
+                appearance="underline"
+                [placeholder]="filterPlaceholder('systemFilter')"
+                [required-visible]="isFieldMandatory('RESOURCES.SYSTEMS')"
+                [error-visible]="hasRequiredError(form.controls.templateDetails.controls.systemFilter)"
+                error-text="This field is required."
+                i18n-error-text
+              >
+                <ng-container i18n>System filter</ng-container>
+              </nimble-text-field>
+              <nimble-button
+                appearance="ghost"
+                content-hidden
+                title="Clear system filter"
+                i18n-title
+                (click)="clearFilter('systemFilter')"
+              >
+                <nimble-icon-xmark slot="start"></nimble-icon-xmark>
+              </nimble-button>
+              <nimble-button appearance="ghost" (click)="openSystemFilterDialog()">
+                <nimble-icon-filter slot="start"></nimble-icon-filter>
+                <ng-container i18n>Configure query</ng-container>
+              </nimble-button>
+            </div>
+          }
+
+          @if (!isControlDisabled('RESOURCES.DUTS')) {
+            <div class="system-filter-input-row" style="display:flex;align-items:flex-end;gap:8px;">
+              <nimble-text-field
+                formControlName="dutFilter"
+                appearance="underline"
+                [placeholder]="filterPlaceholder('dutFilter')"
+                [required-visible]="isFieldMandatory('RESOURCES.DUTS')"
+                [error-visible]="hasRequiredError(form.controls.templateDetails.controls.dutFilter)"
+                error-text="This field is required."
+                i18n-error-text
+              >
+                <ng-container i18n>DUT filter</ng-container>
+              </nimble-text-field>
+              <nimble-button
+                appearance="ghost"
+                content-hidden
+                title="Clear DUT filter"
+                i18n-title
+                (click)="clearFilter('dutFilter')"
+              >
+                <nimble-icon-xmark slot="start"></nimble-icon-xmark>
+              </nimble-button>
+              <nimble-button appearance="ghost" (click)="openFilterDialog('dutFilter')">
+                <nimble-icon-filter slot="start"></nimble-icon-filter>
+                <ng-container i18n>Configure query</ng-container>
+              </nimble-button>
+            </div>
+          }
+
+          @if (!isControlDisabled('RESOURCES.FIXTURES')) {
+            <div class="system-filter-input-row" style="display:flex;align-items:flex-end;gap:8px;">
+              <nimble-text-field
+                formControlName="fixturesFilter"
+                appearance="underline"
+                [placeholder]="filterPlaceholder('fixturesFilter')"
+                [required-visible]="isFieldMandatory('RESOURCES.FIXTURES')"
+                [error-visible]="hasRequiredError(form.controls.templateDetails.controls.fixturesFilter)"
+                error-text="This field is required."
+                i18n-error-text
+              >
+                <ng-container i18n>Fixtures filter</ng-container>
+              </nimble-text-field>
+              <nimble-button
+                appearance="ghost"
+                content-hidden
+                title="Clear fixtures filter"
+                i18n-title
+                (click)="clearFilter('fixturesFilter')"
+              >
+                <nimble-icon-xmark slot="start"></nimble-icon-xmark>
+              </nimble-button>
+              <nimble-button appearance="ghost" (click)="openFilterDialog('fixturesFilter')">
+                <nimble-icon-filter slot="start"></nimble-icon-filter>
+                <ng-container i18n>Configure query</ng-container>
+              </nimble-button>
+            </div>
+          }
+
+          @if (!isControlDisabled('RESOURCES.ASSETS')) {
+            <div class="system-filter-input-row" style="display:flex;align-items:flex-end;gap:8px;">
+              <nimble-text-field
+                formControlName="assetsFilter"
+                appearance="underline"
+                [placeholder]="filterPlaceholder('assetsFilter')"
+                [required-visible]="isFieldMandatory('RESOURCES.ASSETS')"
+                [error-visible]="hasRequiredError(form.controls.templateDetails.controls.assetsFilter)"
+                error-text="This field is required."
+                i18n-error-text
+              >
+                <ng-container i18n>Assets filter</ng-container>
+              </nimble-text-field>
+              <nimble-button
+                appearance="ghost"
+                content-hidden
+                title="Clear assets filter"
+                i18n-title
+                (click)="clearFilter('assetsFilter')"
+              >
+                <nimble-icon-xmark slot="start"></nimble-icon-xmark>
+              </nimble-button>
+              <nimble-button appearance="ghost" (click)="openFilterDialog('assetsFilter')">
+                <nimble-icon-filter slot="start"></nimble-icon-filter>
+                <ng-container i18n>Configure query</ng-container>
+              </nimble-button>
+            </div>
+          }
+        </div>
+      </form>
+    }
+
+    @if (isDashboardVisible()) {
+      <form [formGroup]="form.controls.templateDetails" class="step-form">
+        <div class="dashboard-section" formGroupName="dashboard">
+          <h4 class="section-heading"><ng-container i18n>Dashboard</ng-container></h4>
+
+          <nimble-select
+            formControlName="id"
+            appearance="underline"
+            filter-mode="standard"
+            clearable
+            [disabled]="!form.controls.templateDetails.controls.workspace.value"
+            [error-visible]="
+              form.controls.templateDetails.controls.dashboard.hasError(
+                'dashboardIdRequired'
+              ) && form.controls.templateDetails.controls.dashboard.touched
+            "
+            error-text="Dashboard ID is required when parameters are defined."
+            i18n-error-text
+          >
+            <ng-container i18n>Dashboard ID</ng-container>
+            <nimble-list-option disabled selected hidden value="" i18n
+              >Select dashboard</nimble-list-option
+            >
+            @for (dashboardOption of (dashboardOptions$ | async) ?? []; track dashboardOption.id) {
+              <nimble-list-option [value]="dashboardOption.id">
+                {{ dashboardOption.name }} ({{ dashboardOption.id }})
+              </nimble-list-option>
+            }
+          </nimble-select>
+
+          <span class="properties-label"><ng-container i18n>Dashboard Parameters</ng-container></span>
+          <div formArrayName="parameters" class="property-row-list">
+            @for (param of dashboardParameters.controls; track param; let i = $index) {
+              <div class="property-row" [formGroupName]="i">
+                <nimble-text-field
+                  #dashboardKeyInput
+                  formControlName="key"
+                  appearance="underline"
+                  placeholder="Key"
+                  i18n-placeholder
+                  [error-visible]="isParameterKeyInvalid(param)"
+                  [error-text]="getParameterKeyError(param)"
+                ></nimble-text-field>
+                <nimble-text-field
+                  formControlName="value"
+                  appearance="underline"
+                  placeholder="Value"
+                  i18n-placeholder
+                ></nimble-text-field>
+                <nimble-button
+                  appearance="ghost"
+                  content-hidden
+                  title="Remove parameter"
+                  i18n-title
+                  (click)="removeDashboardParameter(i)"
+                >
+                  <nimble-icon-xmark slot="start"></nimble-icon-xmark>
+                </nimble-button>
+              </div>
+            }
+
+            @if (dashboardParameters.length === 0) {
+              <div class="parameters-empty-text"><ng-container i18n>No dashboard parameters</ng-container></div>
+            }
+
+            <div class="parameters-add-button">
+              <nimble-button appearance="ghost" (click)="addDashboardParameter()">
+                <nimble-icon-add slot="start"></nimble-icon-add>
+                <ng-container i18n>Add parameter</ng-container>
+              </nimble-button>
+            </div>
+          </div>
+        </div>
+      </form>
+    }
+
+    @if (isFileUploadVisible()) {
+      <div class="step-form">
+        <input
+          #fileInput
+          type="file"
+          multiple
+          [attr.accept]="fileAccept"
+          class="file-input-hidden"
+          (change)="onFileSelected($event)"
+        />
+
+        <div
+          class="file-area"
+          (dragover)="onDragOver($event)"
+          (dragleave)="onDragLeave($event)"
+          (drop)="onFileDrop($event)"
+        >
+          <span class="upload-zone-label"><ng-container i18n>Upload File</ng-container></span>
+          <div class="upload-zone" [class.upload-zone--drag-over]="isDragOver()">
+            <span class="upload-zone-text"><ng-container i18n>Drag and drop</ng-container></span>
+            <span class="upload-zone-separator"><ng-container i18n>or</ng-container></span>
+            <nimble-button
+              appearance="outline"
+              appearance-variant="accent"
+              (click)="onBrowseFiles()"
+            >
+              <nimble-icon-folder-open slot="start"></nimble-icon-folder-open>
+              <ng-container i18n>Browse file</ng-container>
+            </nimble-button>
+          </div>
+        </div>
+
+        @if (fileError()) {
+          <span class="upload-error-text">{{ fileError() }}</span>
+        }
+
+        @if (isParsingFile()) {
+          <nimble-spinner></nimble-spinner>
+        }
+
+        <table class="file-table">
+          <thead>
+            <tr>
+              <th class="col-name"><ng-container i18n>Name</ng-container></th>
+              <th><ng-container i18n>Size</ng-container></th>
+              <th class="col-state"><ng-container i18n>State</ng-container></th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (selectedFiles().length > 0 || existingFiles().length > 0) {
+              @for (existingFile of existingFiles(); track existingFile.name + '-' + $index; let i = $index) {
+                <tr class="file-row">
+                  <td [title]="existingFile.name">{{ existingFile.name }}</td>
+                  <td>{{ existingFile.size || '-' }}</td>
+                  <td style="display:inline-flex;align-items:center;gap:6px;">
+                    <nimble-icon-check class="file-state-icon" severity="success"></nimble-icon-check>
+                    <nimble-button
+                      appearance="ghost"
+                      content-hidden
+                      title="Remove file"
+                      i18n-title
+                      (click)="removeExistingFile(i)"
+                    >
+                      <nimble-icon-xmark slot="start"></nimble-icon-xmark>
+                    </nimble-button>
+                  </td>
+                </tr>
+              }
+
+              @for (selectedFile of selectedFiles(); track selectedFile.uid; let i = $index) {
+                <tr class="file-row">
+                  <td [title]="selectedFile.file.name">{{ selectedFile.file.name }}</td>
+                  <td>{{ formatFileSize(selectedFile.file.size) }}</td>
+                  <td style="display:inline-flex;align-items:center;gap:6px;" [title]="selectedFileStateText(selectedFile)">
+                    @if (isSelectedFileUploaded(selectedFile)) {
+                      <nimble-icon-check class="file-state-icon" severity="success"></nimble-icon-check>
+                    } @else if (isSelectedFileUploading(selectedFile)) {
+                      <nimble-spinner></nimble-spinner>
+                    } @else {
+                      <nimble-icon-xmark class="file-state-icon"></nimble-icon-xmark>
+                    }
+                    <nimble-button
+                      appearance="ghost"
+                      content-hidden
+                      title="Remove file"
+                      i18n-title
+                      (click)="removeSelectedFile(i)"
+                    >
+                      <nimble-icon-xmark slot="start"></nimble-icon-xmark>
+                    </nimble-button>
+                  </td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    @if (isDynamicFormVisible()) {
+      <form [formGroup]="form.controls.templateDetails" class="step-form">
+        @if (activeDynamicFormView(); as view) {
+          <div class="dff-view-content">
+            @for (group of view.groups; track group.key) {
+              @let groupHelpId = dffHelpAnchorId(view.key, group.key);
+              <section class="card-section">
+                <div class="card-heading-row">
+                  <h4 class="card-heading">{{ group.displayText }}</h4>
+                  @if (group.helpText) {
+                    <nimble-icon-info-circle [id]="groupHelpId" class="info-icon"></nimble-icon-info-circle>
+                    <nimble-tooltip [anchor]="groupHelpId">{{ group.helpText }}</nimble-tooltip>
+                  }
+                </div>
+
+                <div class="card-content">
+                  @for (field of group.fields; track field.key) {
+                    @let fieldHelpId = dffHelpAnchorId(view.key, group.key, field.key);
+                    <div class="dff-field">
+                      @if (isDynamicFieldBoolean(field)) {
+                        <nimble-checkbox
+                          class="dff-checkbox"
+                          [disabled]="!field.editable"
+                          [checked]="getDynamicFieldValue(field) === 'true'"
+                          [indeterminate]="getDynamicFieldValue(field) === ''"
+                          [error-visible]="isDynamicFieldMissingRequiredValue(field)"
+                          [attr.error-text]="field.requiredText"
+                          (change)="onDynamicBooleanChange(field, $event)"
+                        >
+                          {{ field.displayText }}
+                          @if (field.helpText) {
+                            <nimble-icon-info-circle [id]="fieldHelpId" class="dff-help-icon"></nimble-icon-info-circle>
+                          }
+                        </nimble-checkbox>
+                      } @else if (isDynamicFieldSelect(field)) {
+                        <nimble-select
+                          appearance="underline"
+                          [attr.data-dff-key]="field.key"
+                          [disabled]="!field.editable"
+                          [value]="getDynamicFieldValue(field)"
+                          [clearable]="!field.mandatory"
+                          [attr.filter-mode]="field.allowedValues.length > 15 ? 'standard' : 'none'"
+                          [required-visible]="field.mandatory"
+                          [error-visible]="isDynamicFieldMissingRequiredValue(field)"
+                          [attr.error-text]="field.requiredText"
+                          (change)="onDynamicFieldValueChange(field, $event)"
+                        >
+                          {{ field.displayText }}
+                          @if (field.helpText) {
+                            <nimble-icon-info-circle [id]="fieldHelpId" class="dff-help-icon"></nimble-icon-info-circle>
+                          }
+                          <nimble-list-option value="" disabled selected hidden>{{ field.editable ? field.placeHolder : '' }}</nimble-list-option>
+                          @for (option of field.allowedValues; track option.key) {
+                            <nimble-list-option [value]="option.key">{{ option.displayText }}</nimble-list-option>
+                          }
+                        </nimble-select>
+                      } @else if (isDynamicFieldMultiline(field)) {
+                        <nimble-text-area
+                          appearance="outline"
+                          resize="vertical"
+                          [disabled]="!field.editable"
+                          [placeholder]="field.placeHolder"
+                          [value]="getDynamicFieldValue(field)"
+                          [required-visible]="field.mandatory"
+                          [error-visible]="isDynamicFieldMissingRequiredValue(field)"
+                          [attr.error-text]="field.requiredText"
+                          (input)="onDynamicFieldValueChange(field, $event)"
+                        >
+                          {{ field.displayText }}
+                          @if (field.helpText) {
+                            <nimble-icon-info-circle [id]="fieldHelpId" class="dff-help-icon"></nimble-icon-info-circle>
+                          }
+                        </nimble-text-area>
+                      } @else if (isDynamicFieldNumber(field)) {
+                        <nimble-number-field
+                          appearance="underline"
+                          hide-step
+                          [disabled]="!field.editable"
+                          [placeholder]="field.placeHolder"
+                          [value]="getDynamicFieldValue(field)"
+                          [required-visible]="field.mandatory"
+                          [error-visible]="isDynamicFieldMissingRequiredValue(field)"
+                          [attr.error-text]="field.requiredText"
+                          (input)="onDynamicFieldValueChange(field, $event)"
+                        >
+                          {{ field.displayText }}
+                          @if (field.helpText) {
+                            <nimble-icon-info-circle [id]="fieldHelpId" class="dff-help-icon"></nimble-icon-info-circle>
+                          }
+                        </nimble-number-field>
+                      } @else {
+                        <nimble-text-field
+                          appearance="underline"
+                          [disabled]="!field.editable"
+                          [placeholder]="field.placeHolder"
+                          [value]="getDynamicFieldValue(field)"
+                          [required-visible]="field.mandatory"
+                          [error-visible]="isDynamicFieldMissingRequiredValue(field)"
+                          [attr.error-text]="field.requiredText"
+                          (input)="onDynamicFieldValueChange(field, $event)"
+                        >
+                          {{ field.displayText }}
+                          @if (field.helpText) {
+                            <nimble-icon-info-circle [id]="fieldHelpId" class="dff-help-icon"></nimble-icon-info-circle>
+                          }
+                        </nimble-text-field>
+                      }
+                      @if (field.helpText) {
+                        <nimble-tooltip [anchor]="fieldHelpId">{{ field.helpText }}</nimble-tooltip>
+                      }
+                    </div>
+                  }
+                </div>
+              </section>
+            }
+          </div>
+        }
+      </form>
+    }
+
+    @if (isFileConfigurationVisible()) {
+      <form [formGroup]="form.controls.templateDetails" class="step-form">
+        <span class="properties-label"><ng-container i18n>Properties</ng-container></span>
+
+        @for (prop of customProperties.controls; track prop; let i = $index) {
+          <div class="property-row">
+            <nimble-text-field
+              #propertyKeyInput
+              [formControl]="prop.controls.key"
+              appearance="underline"
+              placeholder="Key"
+              i18n-placeholder
+              [error-visible]="prop.controls.key.invalid && prop.controls.key.touched"
+              error-text="This field is required."
+              i18n-error-text
+            ></nimble-text-field>
+            <nimble-text-field
+              [formControl]="prop.controls.value"
+              appearance="underline"
+              placeholder="Value"
+              i18n-placeholder
+            ></nimble-text-field>
+            <nimble-button
+              appearance="ghost"
+              content-hidden
+              title="Remove property"
+              i18n-title
+              (click)="removeCustomProperty(i)"
+            >
+              <nimble-icon-xmark slot="start"></nimble-icon-xmark>
+            </nimble-button>
+          </div>
+        }
+
+        @if (customProperties.length === 0) {
+          <div class="parameters-empty-text"><ng-container i18n>No custom properties</ng-container></div>
+        }
+
+        <div class="parameters-add-button">
+          <nimble-button appearance="ghost" (click)="addCustomProperty()">
+            <nimble-icon-add slot="start"></nimble-icon-add>
+            <ng-container i18n>Add property</ng-container>
+          </nimble-button>
+        </div>
+      </form>
+    }
+  </section>
+
+  <footer class="footer">
+    <nimble-button class="footer-button" appearance="ghost" (click)="onCancel()">
+      <ng-container i18n>Cancel</ng-container>
+    </nimble-button>
+
+    <nimble-button
+      class="footer-button"
+      appearance="outline"
+      appearance-variant="accent"
+      [disabled]="isSaveDisabled()"
+      (click)="onSave()"
+    >
+      {{ drawerConfig().saveLabel }}
+    </nimble-button>
+  </footer>
+</nimble-drawer>
+
+<nimble-dialog #productFamilyDialog>
+  <span slot="title"><ng-container i18n>Select Product Families</ng-container></span>
+  <nimble-text-field
+    #productFamilySearch
+    appearance="underline"
+    placeholder="Search product families"
+    i18n-placeholder
+    (input)="onProductFamilySearchInput($event)"
+    class="product-search"
+  >
+    <nimble-icon-magnifying-glass slot="start"></nimble-icon-magnifying-glass>
+  </nimble-text-field>
+  <nimble-table
+    #productFamilyTable
+    [data$]="productFamilyTableData$"
+    id-field-name="id"
+    selection-mode="multiple"
+    (selection-change)="onProductFamilySelection($event)"
+    class="product-table"
+  >
+    <nimble-table-column-text field-name="name" column-id="name"><ng-container i18n>Name</ng-container></nimble-table-column-text>
+  </nimble-table>
+  <nimble-button slot="footer" appearance="ghost" (click)="cancelProductFamilyDialog()">
+    <ng-container i18n>Cancel</ng-container>
+  </nimble-button>
+  <nimble-button slot="footer" appearance="outline" (click)="confirmProductFamilySelection()">
+    <ng-container i18n>OK</ng-container>
+  </nimble-button>
+</nimble-dialog>
+
+<nimble-dialog
+  #systemFilterDialog
+  class="system-filter-dialog"
+>
+  <span slot="title" style="font:var(--ni-nimble-title-font);">{{ getActiveFilterDialogTitle() }}</span>
+
+  <div class="query-builder-groups">
+    @for (group of systemFilterGroups(); track $index; let gi = $index) {
+      @if (gi > 0) {
+        <div class="query-group-joiner">
+          <button
+            type="button"
+            class="query-operator-toggle query-operator-toggle--group"
+            (click)="toggleSystemFilterGroupOperator(gi)"
+          >
+            @if (group.logicalOperator === 'OR') {<ng-container i18n>Or</ng-container>} @else {<ng-container i18n>And</ng-container>}
+          </button>
+        </div>
+      }
+
+      <div class="query-group">
+        <div class="query-group-body">
+          <div
+            class="query-group-conditions"
+            cdkDropList
+            cdkDropListLockAxis="y"
+            [cdkDropListData]="group.conditions"
+            (cdkDropListDropped)="onConditionDropped($event, gi)"
+          >
+            @for (condition of group.conditions; track $index; let ci = $index) {
+              <div
+                class="query-condition-block"
+                cdkDrag
+                cdkDragLockAxis="y"
+                cdkDragBoundary=".query-group-conditions"
+                cdkDragPreviewContainer="parent"
+                [class.query-condition-block--invalid]="showSystemFilterValidation() && isSystemFilterConditionInvalid(condition)"
+              >
+                <div class="query-drag-preview" *cdkDragPreview>
+                  <nimble-icon-four-dots-square></nimble-icon-four-dots-square>
+                  <span class="query-drag-preview__text">{{ getConditionSummary(condition) }}</span>
+                </div>
+
+                <div class="query-drag-placeholder" *cdkDragPlaceholder></div>
+
+                @if (ci > 0) {
+                  <div class="query-condition-joiner">
+                    <button
+                      type="button"
+                      class="query-operator-toggle"
+                      (click)="toggleSystemFilterConditionOperator(gi, ci)"
+                    >
+                      @if (condition.logicalOperator === 'OR') {<ng-container i18n>Or</ng-container>} @else {<ng-container i18n>And</ng-container>}
+                    </button>
+                  </div>
+                }
+
+              <div
+                class="query-builder-row"
+                [class.query-builder-row--property]="isFilterProperty(condition)"
+              >
+                <button
+                  type="button"
+                  class="query-drag-handle"
+                  cdkDragHandle
+                  title="Drag to reorder"
+                  i18n-title
+                  aria-label="Drag to reorder"
+                  i18n-aria-label
+                >
+                  <nimble-icon-four-dots-square></nimble-icon-four-dots-square>
+                </button>
+                <div class="query-field-cell" style="display:flex;flex-direction:column;gap:8px;min-width:0;">
+                  <nimble-select
+                    appearance="underline"
+                    [value]="condition.property"
+                    (change)="updateSystemFilterCondition(gi, ci, 'property', $event)"
+                  >
+                    <nimble-list-option disabled hidden value="" i18n>Property</nimble-list-option>
+                    @for (field of activeFilterFields(); track field.dataField) {
+                      <nimble-list-option [value]="field.dataField">{{ field.label }}</nimble-list-option>
+                    }
+                  </nimble-select>
+                </div>
+
+                @if (isFilterProperty(condition)) {
+                  <div class="query-key-cell">
+                    <nimble-text-field
+                      appearance="underline"
+                      placeholder="Property name"
+                      i18n-placeholder
+                      autocomplete="off"
+                      autocapitalize="off"
+                      autocorrect="off"
+                      [spellcheck]="false"
+                      [value]="condition.propertyName ?? ''"
+                      (input)="updateSystemFilterCondition(gi, ci, 'propertyName', $event)"
+                    ></nimble-text-field>
+                  </div>
+                }
+
+                <nimble-select
+                  appearance="underline"
+                  class="query-operator-input"
+                  style="min-width:0;"
+                  [value]="condition.operator"
+                  (change)="updateSystemFilterCondition(gi, ci, 'operator', $event)"
+                >
+                  @for (operator of getOperatorOptions(condition); track operator) {
+                    <nimble-list-option [value]="operator">{{ getOperatorLabel(operator) }}</nimble-list-option>
+                  }
+                </nimble-select>
+
+                <div class="query-value-cell" style="display:flex;flex-direction:column;gap:8px;min-width:0;">
+                  @if (operatorNeedsValue(condition)) {
+                    @if (isFilterValueSelect(condition)) {
+                      <nimble-select
+                        appearance="underline"
+                        [attr.filter-mode]="getFilterValueOptions(condition).length > 15 ? 'standard' : null"
+                        [value]="condition.value"
+                        (change)="updateSystemFilterCondition(gi, ci, 'value', $event)"
+                      >
+                        <nimble-list-option disabled hidden value="" i18n>Value</nimble-list-option>
+                        @for (option of getFilterValueOptions(condition); track option.value) {
+                          <nimble-list-option [value]="option.value">{{ option.label }}</nimble-list-option>
+                        }
+                      </nimble-select>
+                    } @else if (isFilterValueDateTime(condition)) {
+                      <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px;align-items:end;">
+                        <input
+                          #dateTimeInput
+                          class="query-datetime-input"
+                          type="datetime-local"
+                          style="width:100%;min-height:32px;padding:0 0 4px;border:none;border-bottom:1px solid var(--ni-nimble-popup-border-color);background:transparent;color:var(--ni-nimble-body-font-color);font:var(--ni-nimble-body-font);outline:none;appearance:none;-webkit-appearance:none;"
+                          [value]="condition.value"
+                          (input)="updateSystemFilterCondition(gi, ci, 'value', $event)"
+                        />
+                        <nimble-button
+                          class="query-datetime-picker-button"
+                          appearance="ghost"
+                          content-hidden
+                          title="Open date time picker"
+                          i18n-title
+                          (click)="openDateTimePicker(dateTimeInput)"
+                        >
+                          <nimble-icon-calendar-day slot="start"></nimble-icon-calendar-day>
+                        </nimble-button>
+                      </div>
+                    } @else if (isFilterValueNumeric(condition)) {
+                      <nimble-text-field
+                        appearance="underline"
+                        placeholder="Value"
+                        i18n-placeholder
+                        inputmode="decimal"
+                        [value]="condition.value"
+                        (input)="updateSystemFilterCondition(gi, ci, 'value', $event)"
+                      ></nimble-text-field>
+                    } @else {
+                      <nimble-text-field
+                        appearance="underline"
+                        placeholder="Value"
+                        i18n-placeholder
+                        autocomplete="off"
+                        autocapitalize="off"
+                        autocorrect="off"
+                        [spellcheck]="false"
+                        [value]="condition.value"
+                        (input)="updateSystemFilterCondition(gi, ci, 'value', $event)"
+                      ></nimble-text-field>
+                    }
+                  }
+                </div>
+
+                <div class="query-row-actions" style="display:inline-flex;align-items:center;gap:2px;">
+                  <nimble-button
+                    appearance="ghost"
+                    content-hidden
+                    title="Remove condition"
+                    i18n-title
+                    (click)="removeSystemFilterCondition(gi, ci)"
+                  >
+                    <nimble-icon-xmark slot="start"></nimble-icon-xmark>
+                  </nimble-button>
+                </div>
+              </div>
+
+              @if (showSystemFilterValidation() && isSystemFilterConditionInvalid(condition)) {
+                <div style="margin-top:6px;color:var(--ni-nimble-fail-color);font:var(--ni-nimble-control-label-font);"><ng-container i18n>Properties and values need to be populated.</ng-container></div>
+              }
+            </div>
+          }
+          </div>
+
+          <button
+            type="button"
+            class="query-add-condition-btn"
+            (click)="addSystemFilterCondition(gi)"
+          >
+            <span class="query-add-condition-btn__icon">+</span>
+            <span class="query-add-condition-btn__label"><ng-container i18n>Add</ng-container></span>
+          </button>
+        </div>
+
+        @if (gi === systemFilterGroups().length - 1) {
+          <button
+            type="button"
+            class="query-add-group-fab"
+            title="Add group"
+            i18n-title
+            aria-label="Add group"
+            i18n-aria-label
+            (click)="addSystemFilterGroup(gi)"
+          >
+            +
+          </button>
+        }
+      </div>
+    }
+  </div>
+
+  <nimble-button slot="footer" appearance="ghost" (click)="cancelSystemFilterDialog()">
+    <ng-container i18n>Cancel</ng-container>
+  </nimble-button>
+  <nimble-button
+    slot="footer"
+    appearance="outline"
+    (click)="applySystemFilterDialog()"
+  >
+    <ng-container i18n>OK</ng-container>
+  </nimble-button>
+</nimble-dialog>
+
+<nimble-dialog #productDialog class="product-dialog">
+  <span slot="title"><ng-container i18n>Select Products</ng-container></span>
+  <nimble-text-field
+    #productSearch
+    appearance="underline"
+    placeholder="Search products"
+    i18n-placeholder
+    (input)="onProductSearchInput($event)"
+    class="product-search"
+  >
+    <nimble-icon-magnifying-glass slot="start"></nimble-icon-magnifying-glass>
+  </nimble-text-field>
+  <nimble-table
+    #productTable
+    [data$]="productTableData$"
+    id-field-name="id"
+    selection-mode="multiple"
+    (selection-change)="onProductSelection($event)"
+    class="product-table"
+  >
+    <nimble-table-column-text field-name="name" column-id="name"><ng-container i18n>Product</ng-container></nimble-table-column-text>
+    <nimble-table-column-text field-name="partNumber" column-id="partNumber"><ng-container i18n>Part Number</ng-container></nimble-table-column-text>
+  </nimble-table>
+  <nimble-button slot="footer" appearance="ghost" (click)="cancelProductDialog()">
+    <ng-container i18n>Cancel</ng-container>
+  </nimble-button>
+  <nimble-button slot="footer" appearance="outline" (click)="confirmProductSelection()">
+    <ng-container i18n>OK</ng-container>
+  </nimble-button>
+</nimble-dialog>

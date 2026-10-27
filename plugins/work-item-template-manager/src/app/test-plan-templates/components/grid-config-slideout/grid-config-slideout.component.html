@@ -1,0 +1,46 @@
+<nimble-drawer #drawer [location]="drawerLocation" class="drawer">
+  <div class="header-container">
+    <h3><ng-container i18n>Configure grid</ng-container></h3>
+  </div>
+
+  <section class="body">
+    <nimble-tabs #tabs>
+      <nimble-tab id="columns-tab" slot="tab"><ng-container i18n>Columns</ng-container></nimble-tab>
+
+      <nimble-tab id="grouping-tab" slot="tab"><ng-container i18n>Grouping</ng-container></nimble-tab>
+
+      <nimble-tab-panel
+        slot="tabpanel"
+        role="tabpanel"
+        id="columns-panel"
+        aria-labelledby="columns-tab"
+      >
+        <app-grid-column-config
+          [allColumns]="allColumns()"
+          [visibleColumnIds]="visibleColumnIds()"
+        ></app-grid-column-config>
+      </nimble-tab-panel>
+
+      <nimble-tab-panel
+        slot="tabpanel"
+        role="tabpanel"
+        id="grouping-panel"
+        aria-labelledby="grouping-tab"
+      >
+        <app-grid-grouping-config
+          [allColumns]="allColumns()"
+          [groupByIds]="groupByIds()"
+        ></app-grid-grouping-config>
+      </nimble-tab-panel>
+    </nimble-tabs>
+  </section>
+
+  <footer class="footer">
+    <nimble-button (click)="closePanel()" class="footer-button" appearance="ghost">
+      <ng-container i18n>Cancel</ng-container>
+    </nimble-button>
+    <nimble-button (click)="saveAndClose()" class="footer-button" appearance="outline">
+      <ng-container i18n>OK</ng-container>
+    </nimble-button>
+  </footer>
+</nimble-drawer>

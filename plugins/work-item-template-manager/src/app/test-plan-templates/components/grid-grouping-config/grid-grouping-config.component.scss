@@ -1,0 +1,6 @@
+@use '../../../../styles/grid-config-shared' as shared;
+@include shared.grid-config-shared-styles;
+
+.groups-list {
+  overflow: hidden;
+}

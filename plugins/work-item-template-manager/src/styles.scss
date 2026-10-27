@@ -1,0 +1,23 @@
+@use '@ni/nimble-components/dist/fonts' as *;
+@use '@ni/nimble-angular/styles/tokens' as *;
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  height: 100dvh;
+  margin: 0;
+  padding: 0;
+}
+
+.query-datetime-input::-webkit-calendar-picker-indicator {
+  display: none;
+}
+
+.query-datetime-picker-button,
+.query-datetime-picker-button nimble-icon-calendar-day {
+  color: var(--ni-nimble-base-brand-100);
+}

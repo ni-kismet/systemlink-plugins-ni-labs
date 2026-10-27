@@ -1,0 +1,24 @@
+@use '../styles/variables' as *;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+}
+
+.app-container {
+  background-color: var(--ni-nimble-application-background-color);
+  color: var(--ni-nimble-body-font-color);
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.divider {
+  border: none;
+  border-top: 1px solid var(--ni-nimble-body-font-color);
+  margin: 0;
+  opacity: $opacity-dimmed;
+}
