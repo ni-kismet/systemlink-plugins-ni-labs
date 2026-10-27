@@ -1,0 +1,9 @@
+/node_modules
+/dist
+/coverage
+/.angular
+/out-tsc
+/submission-manifest.json
+/manifest.json
+/sbom
+/src/locale/missing.*.json

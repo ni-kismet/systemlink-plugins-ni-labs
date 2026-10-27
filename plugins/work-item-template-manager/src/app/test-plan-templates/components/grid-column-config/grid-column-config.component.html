@@ -1,0 +1,84 @@
+<form [formGroup]="form">
+  <!-- Pinned 'Name' column — always visible, not removable -->
+  <div class="row">
+    <div class="item">
+      <nimble-icon-four-dots-square class="drag-handle pinned" />
+      <nimble-select disabled class="select" aria-label="Columns" i18n-aria-label>
+        <nimble-list-option i18n>Name</nimble-list-option>
+      </nimble-select>
+      <nimble-button
+        appearance="ghost"
+        disabled
+        class="pinned"
+        aria-label="Remove column"
+        i18n-aria-label
+      >
+        <nimble-icon-xmark />
+      </nimble-button>
+    </div>
+  </div>
+
+  <!-- Draggable optional columns -->
+  <div
+    class="drag-list"
+    cdkDropList
+    [cdkDropListData]="columnsFA.controls"
+    (cdkDropListDropped)="drop($event)"
+  >
+    <div formArrayName="columns" class="columns-list">
+      @for (ctrl of columnsFA.controls; track ctrl.value; let index = $index) {
+        <div
+          cdkDrag
+          cdkDragLockAxis="y"
+          cdkDragBoundary=".drag-list"
+          cdkDragPreviewContainer="parent"
+          class="row"
+        >
+          <ng-template cdkDragPreview matchSize>
+            <div class="item preview">
+              <nimble-icon-four-dots-square class="drag-handle" />
+              <span class="preview-label">{{ ctrl.value | labelForId: allColumns() }}</span>
+            </div>
+          </ng-template>
+
+          <div class="item">
+            <nimble-icon-four-dots-square class="drag-handle handle" />
+            <nimble-select
+              [formControlName]="index"
+              [error-visible]="!isAvailable(ctrl)"
+              error-text="Column is no longer available"
+              i18n-error-text
+              class="select"
+              filter-mode="standard"
+              aria-label="Columns"
+              i18n-aria-label
+            >
+              @for (column of availableProperties(ctrl); track column.id) {
+                <nimble-list-option [ngValue]="column.id">
+                  {{ column.label }}
+                </nimble-list-option>
+              }
+            </nimble-select>
+            <nimble-button
+              appearance="ghost"
+              (click)="removeSelect(index)"
+              aria-label="Remove column"
+              i18n-aria-label
+            >
+              <nimble-icon-xmark />
+            </nimble-button>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+
+  @if (canAddMoreColumn) {
+    <div class="add-row">
+      <nimble-button appearance="ghost" (click)="addSelect()">
+        <nimble-icon-add slot="start" />
+        <ng-container i18n>Add column</ng-container>
+      </nimble-button>
+    </div>
+  }
+</form>

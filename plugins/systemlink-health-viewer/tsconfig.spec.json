@@ -3,7 +3,7 @@
   "compilerOptions": {
     "outDir": "./out-tsc/spec",
     "noEmit": false,
-    "types": ["jasmine", "node"]
+    "types": ["jasmine", "node", "@angular/localize"]
   },
   "files": ["src/test.ts", "src/polyfills.ts"],
   "include": ["src/**/*.spec.ts", "src/**/*.d.ts"]

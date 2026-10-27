@@ -21,6 +21,9 @@ still writes directly to `dist/systemlink-health-viewer` for NI packaging.
 - **Search and status filters** — quickly narrow the list by name or health status
 - **Endpoint output details modal** — inspect the full response for any check
 - **Theme sync** — automatically follows the SystemLink light/dark theme
+- **Localization** — follows the SystemLink UI language (English, German, French,
+  Japanese, Chinese), reusing SystemLink's own translations where available; dates,
+  numbers, and latency values use the selected language's formatting
 - **Same-origin, read-only** — resolves endpoints relative to the hosting webapp; no
   data is modified
 
@@ -31,3 +34,7 @@ still writes directly to `dist/systemlink-health-viewer` for NI packaging.
 | `/niserviceregistry/v1/services` | Discover installed services and their live status |
 | `/niauth/v1/auth` | Resolve the session's edition entitlements to select applicable checks |
 | Configurable endpoints from `assets/test-mapping.json` | Probe each service's health (e.g. `/niauth/v1/policies`, `/nidataframe/v1/tables`, `/ninotebook/v1/notebook/query`, `/nitaghistorian/v2/tags/query-history`, `/nilocation/v1/locations`, and others) |
+
+Run `npm run test:i18n` to verify locale catalog keys and interpolation placeholders,
+and that empty or incomplete SystemLink translation harvests cannot overwrite any checked-in
+locale catalogs.

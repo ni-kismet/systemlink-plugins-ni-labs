@@ -1,0 +1,26 @@
+<div class="shell">
+  <header class="shell__header">
+    <div class="shell__glyph" aria-hidden="true">
+      <svg viewBox="0 0 24 24" focusable="false">
+        <!-- Ascending bars -->
+        <rect x="1.5" y="15" width="5"   height="6"  rx="0.8"/>
+        <rect x="9.5"  y="11" width="5"   height="10" rx="0.8"/>
+        <rect x="17.5" y="6"  width="5"   height="15" rx="0.8"/>
+        <!-- Trend line -->
+        <polyline points="4,15 12,11 20,6"/>
+        <!-- Peak dot -->
+        <circle cx="20" cy="6" r="1.5" fill="currentColor" stroke="none"/>
+      </svg>
+    </div>
+    <div class="shell__intro">
+      <h1>SystemLink Usage Statistics</h1>
+      <p class="shell__subtitle" i18n>Real-time usage counts for core SystemLink services in the active instance.</p>
+    </div>
+  </header>
+
+  <section class="shell__workspace">
+    <main class="shell__content">
+      <router-outlet></router-outlet>
+    </main>
+  </section>
+</div>

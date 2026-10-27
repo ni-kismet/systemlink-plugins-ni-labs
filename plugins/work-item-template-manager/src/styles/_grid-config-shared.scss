@@ -1,0 +1,68 @@
+@use 'variables' as *;
+@use '@ni/nimble-components/dist/fonts' as *;
+@use '@ni/nimble-angular/styles/tokens' as *;
+
+@mixin grid-config-shared-styles() {
+  .add-row {
+    margin-top: $spacing-xs;
+  }
+
+  .row {
+    align-items: center;
+    display: flex;
+    gap: $spacing-xs;
+    margin: 0.25rem 0;
+  }
+
+  .item {
+    align-items: center;
+    background: $ni-nimble-application-background-color;
+    border-radius: $border-radius-item;
+    display: flex;
+    gap: $spacing-xs;
+    padding: 0.625rem $spacing-sm;
+    transition: transform 0.25s cubic-bezier(0, 0, 0.2, 1);
+    user-select: none;
+    width: 100%;
+
+    &.preview {
+      box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
+    }
+
+    .select {
+      width: 100%;
+    }
+
+    .drag-handle {
+      flex-shrink: 0;
+
+      &.handle {
+        cursor: grab;
+      }
+    }
+
+    .preview-label {
+      color: $ni-nimble-body-font-color;
+      font-size: 0.875rem;
+    }
+  }
+
+  .drag-list {
+    overflow: hidden;
+
+    .cdk-drag-placeholder {
+      opacity: 0;
+    }
+  }
+
+  .cdk-drag-preview {
+    border-radius: $border-radius-item;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  .cdk-drop-list-dragging .cdk-drag:not(.cdk-drag-placeholder),
+  .cdk-drag-animating {
+    transition: transform 300ms cubic-bezier(0, 0, 0.2, 1);
+  }
+}

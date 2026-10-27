@@ -1,4 +1,14 @@
-import { Injectable } from '@angular/core';
+import { Inject, Injectable, LOCALE_ID } from '@angular/core';
+import { querySystems } from '@ni/systemlink-clients-ts/systems-management';
+import {
+  createClient as createSystemsManagementClient,
+  createConfig as createSystemsManagementConfig,
+} from '@ni/systemlink-clients-ts/systems-management/client';
+import { queryResultsV2, type ResultsAdvancedQuery } from '@ni/systemlink-clients-ts/test-monitor';
+import {
+  createClient as createTestMonitorClient,
+  createConfig as createTestMonitorConfig,
+} from '@ni/systemlink-clients-ts/test-monitor/client';
 
 import { createDemoHomePageModel } from '../demo/demo-home-data';
 import { SystemLinkContextService } from './systemlink-context.service';
@@ -105,11 +115,21 @@ const VIRTUAL_PROJECTION =
 // can build the correct query-results filter for them.
 const NULL_HOST_TOKEN = '\u0000NULL_HOST';
 const EMPTY_HOST_TOKEN = '\u0000EMPTY_HOST';
+type ResultUrlPlatform = 'SLE' | 'SLS' | 'unknown';
+
+/** Medium date + time in the browser's time zone and SystemLink language, like SystemLink tables. */
+function formatTimestamp(date: Date | null, locale: string): string {
+  return date ? date.toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'medium' }) : '';
+}
 
 @Injectable({ providedIn: 'root' })
 export class WebappHomeDataService {
   /** Cached across calls: whether the target instance supports the virtual node concept (SLE only). */
   private virtualNodesSupported: boolean | null = null;
+  private readonly systemsManagementClient: ReturnType<typeof createSystemsManagementClient>;
+  private readonly testMonitorClient: ReturnType<typeof createTestMonitorClient>;
+  private resultUrlPlatform: ResultUrlPlatform | null = null;
+  private queryResultsApiSupported = false;
 
   // Caps concurrent in-flight requests so aggressive parallelism doesn't trigger 429s.
   private readonly maxConcurrentRequests = 6;
@@ -117,11 +137,42 @@ export class WebappHomeDataService {
   private readonly requestWaiters: (() => void)[] = [];
   readonly isDemoMode = this.isLocalDemoRequested();
 
-  constructor(private readonly context: SystemLinkContextService) {}
+  constructor(
+    private readonly context: SystemLinkContextService,
+    @Inject(LOCALE_ID) private readonly locale: string,
+  ) {
+    const fetchWithContext: typeof fetch = (input, init) =>
+      this.fetchWithRetry(
+        input,
+        this.context.buildRequestInit({
+          ...init,
+          headers: init?.headers ?? (input instanceof Request ? input.headers : undefined),
+        }),
+      );
+
+    this.systemsManagementClient = createSystemsManagementClient(
+      createSystemsManagementConfig({ baseUrl: context.origin, fetch: fetchWithContext }),
+    );
+    this.testMonitorClient = createTestMonitorClient(
+      createTestMonitorConfig({
+        baseUrl: `${context.origin}/nitestmonitor`,
+        fetch: fetchWithContext,
+      }),
+    );
+    // Keep network failures as rejections, but let HTTP capability probes inspect their response.
+    for (const client of [this.systemsManagementClient, this.testMonitorClient]) {
+      client.interceptors.error.use((error, response) => {
+        if (!response) {
+          throw error;
+        }
+        return error;
+      });
+    }
+  }
 
   async load(): Promise<HomePageModel> {
     if (this.isDemoMode) {
-      return createDemoHomePageModel();
+      return createDemoHomePageModel(this.locale);
     }
 
     const now = new Date();
@@ -138,6 +189,7 @@ export class WebappHomeDataService {
     // Kick off every query that doesn't depend on virtual-node support so the systems queries and
     // the per-month result queries all run concurrently instead of in sequential batches.
     const fleetPromise = this.queryAllSystems('id != null', 'new(id)');
+    const slsPlatformPromise = this.detectSlsPlatform();
     const resultIdentitiesPromise = Promise.all(
       windows.map((w) => this.queryResultIdentities(w.windowStart, w.snapshot)),
     );
@@ -146,12 +198,14 @@ export class WebappHomeDataService {
     const managedFilter = virtualSupported ? MANAGED_FILTER_WITH_VIRTUAL : MANAGED_FILTER_NO_VIRTUAL;
     const managedProjection = virtualSupported ? MANAGED_PROJECTION_WITH_STATE : MANAGED_PROJECTION_NO_STATE;
 
-    const [managedRaw, virtualRaw, fleetRaw, resultIdentitiesByMonth] = await Promise.all([
+    const [managedRaw, virtualRaw, fleetRaw, resultIdentitiesByMonth, isSlsPlatform] = await Promise.all([
       this.queryAllSystems(managedFilter, managedProjection),
       virtualSupported ? this.queryAllSystems(VIRTUAL_FILTER, VIRTUAL_PROJECTION) : Promise.resolve([]),
       fleetPromise,
       resultIdentitiesPromise,
+      slsPlatformPromise,
     ]);
+    this.resultUrlPlatform = isSlsPlatform ? 'SLS' : this.queryResultsApiSupported ? 'SLE' : 'unknown';
     // Every real system id; a SYSTEM_ID on a result that isn't here is an orphaned/misclassified host.
     const fleetIds = new Set(
       fleetRaw
@@ -366,24 +420,18 @@ export class WebappHomeDataService {
   }
 
   private async queryAllSystems(filter: string, projection: string): Promise<RawSystem[]> {
-    const url = this.context.buildApiUrl('nisysmgmt/v1/query-systems');
     const all: RawSystem[] = [];
     let skip = 0;
 
     for (;;) {
-      const response = await this.fetchWithRetry(
-        url,
-        this.context.buildRequestInit({
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ filter, skip, take: PAGE_SIZE, projection }),
-        }),
-      );
-      if (!response.ok) {
-        throw new Error(`query-systems failed (${response.status})`);
+      const response = await querySystems({
+        client: this.systemsManagementClient,
+        body: { filter, skip, take: PAGE_SIZE, projection },
+      });
+      if (!response.response.ok) {
+        throw new Error($localize`query-systems failed (${response.response.status}:status:)`);
       }
-      const payload = (await response.json()) as { data?: RawSystem[] };
-      const data = payload.data ?? [];
+      const data = this.systemRecordsFromResponse(response.data);
       if (data.length === 0) {
         break;
       }
@@ -394,56 +442,80 @@ export class WebappHomeDataService {
     return all;
   }
 
+  private systemRecordsFromResponse(payload: unknown): RawSystem[] {
+    if (Array.isArray(payload)) {
+      return payload.flatMap((entry) => {
+        if (!entry || typeof entry !== 'object') {
+          return [];
+        }
+        const data = (entry as { data?: unknown }).data;
+        return data && typeof data === 'object' ? [data as RawSystem] : [];
+      });
+    }
+
+    if (!payload || typeof payload !== 'object') {
+      return [];
+    }
+    const data = (payload as { data?: unknown }).data;
+    return Array.isArray(data) ? (data as RawSystem[]) : [];
+  }
+
   /** Probes whether the connected instance supports querying virtual node state (SLE only). */
   private async detectVirtualNodeSupport(): Promise<boolean> {
     if (this.virtualNodesSupported !== null) {
       return this.virtualNodesSupported;
     }
 
-    const url = this.context.buildApiUrl('nisysmgmt/v1/query-systems');
-    const response = await this.fetchWithRetry(
-      url,
-      this.context.buildRequestInit({
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filter: VIRTUAL_FILTER, skip: 0, take: 1, projection: VIRTUAL_PROJECTION }),
-      }),
+    const response = await querySystems({
+      client: this.systemsManagementClient,
+      body: { filter: VIRTUAL_FILTER, skip: 0, take: 1, projection: VIRTUAL_PROJECTION },
+    });
+    const supported = response.response.ok;
+    this.virtualNodesSupported = supported;
+    return supported;
+  }
+
+  private async detectSlsPlatform(): Promise<boolean> {
+    const slsResponse = await this.fetchWithRetry(
+      this.context.buildApiUrl('nitagrule/'),
+      this.context.buildRequestInit({ headers: { Accept: 'application/json' } }),
     );
-    this.virtualNodesSupported = response.ok;
-    return this.virtualNodesSupported;
+    if (slsResponse.status === 200) {
+      const payload: unknown = await slsResponse.json();
+      if (
+        typeof payload === 'object' &&
+        payload !== null &&
+        'v1' in payload &&
+        typeof payload.v1 === 'object' &&
+        payload.v1 !== null &&
+        'version' in payload
+      ) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private async queryResultIdentities(windowStart: Date, snapshot: Date): Promise<ResultIdentity[]> {
-    const url = this.context.buildApiUrl('nitestmonitor/v2/query-results');
     const filter = `updatedAt >= "${windowStart.toISOString()}" and updatedAt <= "${snapshot.toISOString()}"`;
     const identities: ResultIdentity[] = [];
     let continuationToken: string | undefined;
     const seenContinuationTokens = new Set<string>();
 
     for (;;) {
-      const response = await this.fetchWithRetry(
-        url,
-        this.context.buildRequestInit({
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            filter,
-            take: PAGE_SIZE,
-            projection: ['HOST_NAME', 'SYSTEM_ID'],
-            continuationToken,
-          }),
-        }),
-      );
-      if (!response.ok) {
-        throw new Error(`query-results failed (${response.status})`);
+      const response = await this.queryTestResults({
+        filter,
+        take: PAGE_SIZE,
+        projection: ['HOST_NAME', 'SYSTEM_ID'],
+        continuationToken,
+      });
+      if (!response.response.ok) {
+        throw new Error($localize`query-results failed (${response.response.status}:status:)`);
       }
-      const payload = (await response.json()) as {
-        results?: ResultIdentity[];
-        continuationToken?: string;
-      };
-      const results = payload.results ?? [];
+      const results = (response.data?.results ?? []) as ResultIdentity[];
+      this.queryResultsApiSupported ||= Array.isArray(response.data?.results);
       identities.push(...results);
-      const nextToken = payload.continuationToken;
+      const nextToken = response.data?.continuationToken;
       if (!nextToken || results.length === 0 || seenContinuationTokens.has(nextToken)) {
         break;
       }
@@ -492,7 +564,6 @@ export class WebappHomeDataService {
       return;
     }
 
-    const url = this.context.buildApiUrl('nitestmonitor/v2/query-results');
     const filter = `updatedAt >= "${windowStart.toISOString()}" and updatedAt <= "${windowEnd.toISOString()}"`;
     // Latest result (id + timestamp) per host; captured for every host seen, not just targets.
     const latestByHost = new Map<string, { ts: Date | null; id?: string }>();
@@ -501,29 +572,18 @@ export class WebappHomeDataService {
     const seenContinuationTokens = new Set<string>();
 
     for (;;) {
-      const response = await this.fetchWithRetry(
-        url,
-        this.context.buildRequestInit({
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            filter,
-            orderBy: 'UPDATED_AT',
-            descending: true,
-            take: 1000,
-            projection: ['HOST_NAME', 'STARTED_AT', 'UPDATED_AT', 'ID'],
-            continuationToken,
-          }),
-        }),
-      );
-      if (!response.ok) {
+      const response = await this.queryTestResults({
+        filter,
+        orderBy: 'UPDATED_AT',
+        descending: true,
+        take: 1000,
+        projection: ['HOST_NAME', 'STARTED_AT', 'UPDATED_AT', 'ID'],
+        continuationToken,
+      });
+      if (!response.response.ok) {
         break;
       }
-      const payload = (await response.json()) as {
-        results?: { hostName?: string; startedAt?: string; updatedAt?: string; id?: string }[];
-        continuationToken?: string;
-      };
-      const results = payload.results ?? [];
+      const results = response.data?.results ?? [];
       for (const result of results) {
         // Results are newest-first, so the first hit per host is its latest.
         const key = (result.hostName ?? '').trim().toUpperCase();
@@ -535,7 +595,7 @@ export class WebappHomeDataService {
           targetsFound++;
         }
       }
-      const nextToken = payload.continuationToken;
+      const nextToken = response.data?.continuationToken;
       if (
         !nextToken ||
         results.length === 0 ||
@@ -581,7 +641,13 @@ export class WebappHomeDataService {
   }
 
   private resultUrlFromId(id: string): string {
-    return `${this.context.origin}/testinsights/results/result/${id}`;
+    if (this.resultUrlPlatform === 'SLE') {
+      return `${this.context.origin}/testinsights/results/result/${id}`;
+    }
+    if (this.resultUrlPlatform === 'SLS') {
+      return `${this.context.origin}/#testmonitor/testresults/testresult/${id}`;
+    }
+    return '';
   }
 
   /** Latest result (timestamp + id) for a hostName/systemId predicate, bounded to the window. */
@@ -590,40 +656,35 @@ export class WebappHomeDataService {
     windowStart: Date,
     windowEnd: Date,
   ): Promise<{ timestamp: Date | null; id: string | null }> {
-    const url = this.context.buildApiUrl('nitestmonitor/v2/query-results');
     const filter =
       `${hostFilter} ` +
       `and updatedAt >= "${windowStart.toISOString()}" and updatedAt <= "${windowEnd.toISOString()}"`;
-    const response = await this.fetchWithRetry(
-      url,
-      this.context.buildRequestInit({
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          filter,
-          orderBy: 'UPDATED_AT',
-          descending: true,
-          take: 1,
-          projection: ['ID', 'UPDATED_AT', 'STARTED_AT'],
-        }),
-      }),
-    );
-    if (!response.ok) {
+    const response = await this.queryTestResults({
+      filter,
+      orderBy: 'UPDATED_AT',
+      descending: true,
+      take: 1,
+      projection: ['ID', 'UPDATED_AT', 'STARTED_AT'],
+    });
+    if (!response.response.ok) {
       return { timestamp: null, id: null };
     }
-    const payload = (await response.json()) as {
-      results?: { id?: string; updatedAt?: string; startedAt?: string }[];
-    };
-    const result = payload.results?.[0];
+    const result = response.data?.results?.[0];
     return result
       ? { timestamp: this.parseDate(result.updatedAt ?? result.startedAt), id: result.id ?? null }
       : { timestamp: null, id: null };
+  }
+
+  private queryTestResults(body: ResultsAdvancedQuery) {
+    return queryResultsV2({ client: this.testMonitorClient, body });
   }
 
   private toDetailRow(record: StatusRecord, index: number): NodeDetailRow {
     const id = record.id ?? '';
     // Keep the NULL/empty sentinel out of the DOM; the clean predicate lives in resultFilter.
     const isToken = record.hostRaw === NULL_HOST_TOKEN || record.hostRaw === EMPTY_HOST_TOKEN;
+    const tokenLabel =
+      record.hostRaw === NULL_HOST_TOKEN ? $localize`(no host name)` : $localize`(empty host name)`;
     return {
       rowId: `${index}`,
       id,
@@ -631,22 +692,23 @@ export class WebappHomeDataService {
       // Show the friendly alias; for real systems with no alias fall back to the host, never the raw id.
       alias: (record.alias ?? '').trim() || (id ? record.host : ''),
       // Display the original host casing (hostRaw); the uppercased host is only an internal de-dup key.
-      hostName: isToken ? record.host : record.hostRaw,
+      hostName: isToken ? tokenLabel : record.hostRaw,
       hostRaw: isToken ? '' : record.hostRaw,
       nodeType: record.nodeType,
       status: record.status,
-      registered: this.formatTimestamp(record.created),
-      lastActive: this.formatTimestamp(record.lastUpdated),
+      registered: formatTimestamp(record.created, this.locale),
+      lastActive: formatTimestamp(record.lastUpdated, this.locale),
       lastActiveIso: record.lastUpdated ? record.lastUpdated.toISOString() : '',
       resultUrl: record.resultUrl ?? '',
-      resultLabel: record.resultUrl ? 'View Result' : '',
+      resultLabel: record.resultUrl ? $localize`View Result` : '',
     };
   }
 
   /** Fetch wrapper that retries on 429/503 with backoff (honoring Retry-After). */
-  private async fetchWithRetry(url: string, init: RequestInit, maxRetries = 6): Promise<Response> {
+  private async fetchWithRetry(url: RequestInfo | URL, init: RequestInit, maxRetries = 6): Promise<Response> {
+    const request = new Request(url, init);
     for (let attempt = 0; ; attempt++) {
-      const response = await this.withSlot(() => fetch(url, init));
+      const response = await this.withSlot(() => fetch(request.clone()));
       if ((response.status !== 429 && response.status !== 503) || attempt >= maxRetries) {
         return response;
       }
@@ -711,22 +773,6 @@ export class WebappHomeDataService {
 
   private yearMonthUtc(date: Date): string {
     return `${date.getUTCFullYear()}-${this.pad(date.getUTCMonth() + 1)}`;
-  }
-
-  private formatTimestamp(date: Date | null): string {
-    if (!date) {
-      return '';
-    }
-    // Display in the browser's local timezone to match how SystemLink shows timestamps.
-    return date.toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: true,
-    });
   }
 
   private pad(value: number): string {

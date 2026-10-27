@@ -36,6 +36,9 @@
  *   });
  * Preset keys are "<amount><unit>" where unit is m|h|d|w|y (minutes/hours/days/
  * weeks/years), or the special key 'all' (no lower bound → returns null range).
+ *
+ * Localization: pass `locale` (BCP 47, used for date display) and `labels`
+ * (partial override of DEFAULT_LABELS; {start}/{end} are placeholders).
  */
 (function (global) {
   'use strict';
@@ -50,6 +53,19 @@
     '90d': 'Last 90 days',
     '180d': 'Last 6 months',
     '365d': 'Last year',
+  };
+  const DEFAULT_LABELS = {
+    apply: 'Apply time range',
+    absolute: 'Absolute time range',
+    from: 'From',
+    to: 'To',
+    pickStart: 'Pick start date and time',
+    pickEnd: 'Pick end date and time',
+    quickRanges: 'Quick ranges',
+    invalidRange: 'Please enter a valid time range.',
+    endBeforeStart: 'The end of the range must be after the start.',
+    rangeTitle: '{start} to {end}',
+    filterByTime: 'Filter by time',
   };
 
   const CSS = `
@@ -162,8 +178,8 @@ nimble-theme-provider[theme="color"] .trc-dialog,
     const parsed = new Date(normalized);
     return isNaN(parsed.getTime()) ? null : parsed;
   }
-  function formatDisplay(d) {
-    return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  function formatDisplay(d, locale) {
+    return d.toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' });
   }
   function relativeStart(value, ref) {
     ref = ref || new Date();
@@ -193,6 +209,8 @@ nimble-theme-provider[theme="color"] .trc-dialog,
     injectStyles();
 
     const presets = options.presets || DEFAULT_PRESETS;
+    const labels = Object.assign({}, DEFAULT_LABELS, options.labels);
+    const locale = options.locale;
     const order = options.order || Object.keys(presets);
     const defaultValue = (options.defaultValue && presets[options.defaultValue]) ? options.defaultValue
       : (presets['90d'] ? '90d' : order[0]);
@@ -208,32 +226,32 @@ nimble-theme-provider[theme="color"] .trc-dialog,
     // ----- dialog -----
     const dialog = elem('dialog', { class: 'trc-dialog' });
     const quickButtons = order.map((key) =>
-      `<button class="trc-quick-btn" data-range="${key}" type="button">${presets[key]}</button>`
+      `<button class="trc-quick-btn" data-range="${key}" type="button"></button>`
     ).join('');
     // The apply button can render as a Nimble outline button (opts.nimble) or a
     // plain styled button. Either way it is type="button" and wired via click;
     // the form's submit handler covers the Enter key inside the text fields.
     const applyBtnHtml = options.nimble
-      ? '<nimble-button class="trc-apply-nimble" appearance="outline" type="button">Apply time range</nimble-button>'
-      : '<button class="trc-apply" type="button">Apply time range</button>';
+      ? '<nimble-button class="trc-apply-nimble trc-l-apply" appearance="outline" type="button"></nimble-button>'
+      : '<button class="trc-apply trc-l-apply" type="button"></button>';
     dialog.innerHTML = `
       <form class="trc-form" method="dialog">
         <div class="trc-layout">
           <div class="trc-absolute">
-            <div class="trc-title">Absolute time range</div>
+            <div class="trc-title trc-l-absolute"></div>
             <label class="trc-field">
-              <span>From</span>
+              <span class="trc-l-from"></span>
               <div class="trc-input-row">
                 <input class="trc-text trc-start" type="text" placeholder="YYYY-MM-DD HH:mm:ss" required>
-                <button class="trc-pick trc-start-pick" type="button" aria-label="Pick start date and time" title="Pick start date and time">${CAL_SVG}</button>
+                <button class="trc-pick trc-start-pick" type="button">${CAL_SVG}</button>
                 <input class="trc-native trc-start-native" type="datetime-local" tabindex="-1" aria-hidden="true">
               </div>
             </label>
             <label class="trc-field">
-              <span>To</span>
+              <span class="trc-l-to"></span>
               <div class="trc-input-row">
                 <input class="trc-text trc-end" type="text" placeholder="YYYY-MM-DD HH:mm:ss" required>
-                <button class="trc-pick trc-end-pick" type="button" aria-label="Pick end date and time" title="Pick end date and time">${CAL_SVG}</button>
+                <button class="trc-pick trc-end-pick" type="button">${CAL_SVG}</button>
                 <input class="trc-native trc-end-native" type="datetime-local" tabindex="-1" aria-hidden="true">
               </div>
             </label>
@@ -242,12 +260,25 @@ nimble-theme-provider[theme="color"] .trc-dialog,
             </div>
             <div class="trc-err" hidden></div>
           </div>
-          <aside class="trc-quick" aria-label="Quick ranges">
-            <div class="trc-title">Quick ranges</div>
+          <aside class="trc-quick">
+            <div class="trc-title trc-l-quick"></div>
             <div class="trc-quick-list">${quickButtons}</div>
           </aside>
         </div>
       </form>`;
+    // Labels are set as text/attributes (not interpolated HTML) so translations can't inject markup.
+    dialog.querySelector('.trc-l-apply').textContent = labels.apply;
+    dialog.querySelector('.trc-l-absolute').textContent = labels.absolute;
+    dialog.querySelector('.trc-l-from').textContent = labels.from;
+    dialog.querySelector('.trc-l-to').textContent = labels.to;
+    dialog.querySelector('.trc-l-quick').textContent = labels.quickRanges;
+    dialog.querySelector('.trc-quick').setAttribute('aria-label', labels.quickRanges);
+    for (const [selector, text] of [['.trc-start-pick', labels.pickStart], ['.trc-end-pick', labels.pickEnd]]) {
+      const pick = dialog.querySelector(selector);
+      pick.setAttribute('aria-label', text);
+      pick.title = text;
+    }
+    dialog.querySelectorAll('.trc-quick-btn').forEach((b) => { b.textContent = presets[b.dataset.range]; });
     // Mount the dialog inside the nearest theme provider (once the button is
     // placed) so it inherits Nimble tokens/fonts; fall back to <body>.
 
@@ -274,12 +305,14 @@ nimble-theme-provider[theme="color"] .trc-dialog,
     function updateButton() {
       updateQuickState();
       if (state.mode === 'custom' && state.custom) {
-        label.textContent = `${formatDisplay(state.custom.start)} – ${formatDisplay(state.custom.end)}`;
-        btn.title = `${state.custom.start.toLocaleString()} to ${state.custom.end.toLocaleString()}`;
+        label.textContent = `${formatDisplay(state.custom.start, locale)} – ${formatDisplay(state.custom.end, locale)}`;
+        btn.title = labels.rangeTitle
+          .replace('{start}', state.custom.start.toLocaleString(locale))
+          .replace('{end}', state.custom.end.toLocaleString(locale));
         return;
       }
       label.textContent = presets[state.value] || presets[defaultValue];
-      btn.title = options.label || 'Filter by time';
+      btn.title = options.label || labels.filterByTime;
     }
     function position() {
       const margin = 12;
@@ -335,8 +368,8 @@ nimble-theme-provider[theme="color"] .trc-dialog,
       if (e) e.preventDefault();
       const start = parseFieldValue(startText.value);
       const end = parseFieldValue(endText.value);
-      if (!start || !end) { errBox.textContent = 'Please enter a valid time range.'; errBox.hidden = false; return; }
-      if (end < start) { errBox.textContent = 'The end of the range must be after the start.'; errBox.hidden = false; return; }
+      if (!start || !end) { errBox.textContent = labels.invalidRange; errBox.hidden = false; return; }
+      if (end < start) { errBox.textContent = labels.endBeforeStart; errBox.hidden = false; return; }
       state.mode = 'custom';
       state.custom = { start, end };
       updateButton();
@@ -403,7 +436,7 @@ nimble-theme-provider[theme="color"] .trc-dialog,
     };
   }
 
-  const api = { create, DEFAULT_PRESETS, relativeStart };
+  const api = { create, DEFAULT_PRESETS, DEFAULT_LABELS, relativeStart };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   global.TimeRangeControl = api;
 })(typeof window !== 'undefined' ? window : this);

@@ -27,7 +27,7 @@ export interface AppConfig {
 
 export class HealthConfigurationError extends Error {
   constructor() {
-    super('Unable to load health-check configuration.');
+    super($localize`Unable to load health-check configuration.`);
     this.name = 'HealthConfigurationError';
   }
 }
@@ -119,8 +119,8 @@ export class SystemLinkService {
                     registryState: this.getRegistryMatchForCheck(check, registryResult.matches).status,
                     latencyMs: null,
                     responseCode: null,
-                    output: `Unexpected health-check failure: ${this.stringifyResponse(error)}`,
-                    fullOutput: `Unexpected health-check failure: ${this.stringifyResponse(error, Number.POSITIVE_INFINITY)}`,
+                    output: $localize`Unexpected health-check failure: ${this.stringifyResponse(error)}:details:`,
+                    fullOutput: $localize`Unexpected health-check failure: ${this.stringifyResponse(error, Number.POSITIVE_INFINITY)}:details:`,
                     functional: false
                   }))
                 )
@@ -210,7 +210,7 @@ export class SystemLinkService {
       const isNetworkError = error.status === 0;
       const isAuthRestricted = error.status === 401 || error.status === 403;
       const output = isNetworkError
-        ? `Network request failed (possible CORS, CSP, or connectivity issue) for ${check.method} ${check.endpoint}`
+        ? $localize`Network request failed (possible CORS, CSP, or connectivity issue) for ${check.method}:method: ${check.endpoint}:endpoint:`
         : error.error
           ? this.stringifyResponse(error.error)
           : this.stringifyResponse(error.message);
@@ -625,7 +625,7 @@ export class SystemLinkService {
 
   private stringifyResponse(value: unknown, maxLength = 500): string {
     if (value === null || value === undefined) {
-      return 'No response body';
+      return $localize`No response body`;
     }
     if (typeof value === 'string') {
       return value.length > maxLength ? `${value.slice(0, maxLength)}...` : value;

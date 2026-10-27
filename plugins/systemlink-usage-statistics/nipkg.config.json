@@ -1,0 +1,16 @@
+{
+  "package": "systemlink-usage-statistics",
+  "version": "0.1.0",
+  "displayName": "SystemLink Usage Statistics",
+  "description": "Usage counts for core SystemLink services across the instance or a single workspace, with administrator-only growth history.",
+  "section": "Monitoring",
+  "maintainer": "Mike Castaneda <mike.castaneda@emerson.com>",
+  "homepage": "https://github.com/ni-kismet/systemlink-plugins-ni-labs",
+  "license": "MIT",
+  "xbPlugin": "webapp",
+  "slPluginManagerTags": "webapp,usage,statistics,metrics,capacity,administration,dashboard",
+  "slPluginManagerMinServerVersion": "2024 Q4",
+  "iconFile": "icon.svg",
+  "buildDir": "dist/systemlink-usage-statistics/browser",
+  "buildCommand": "npm run build"
+}

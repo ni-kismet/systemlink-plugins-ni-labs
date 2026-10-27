@@ -1,0 +1,754 @@
+@use '../../../../styles/variables' as *;
+@use '@ni/nimble-components/dist/fonts' as *;
+@use '@ni/nimble-angular/styles/tokens' as *;
+
+// Slide-out layout dimensions (mirrors Skyline's sl-slide-out-tokens)
+$slide-out-padding-inline: 30px;
+$slide-out-header-block-start: 35px;
+$slide-out-content-gap: 15px;
+$slide-out-footer-button-min-width: 110px;
+
+// Upload zone dimensions
+$upload-zone-padding-horizontal: 100px;
+$upload-zone-content-opacity: 0.7;
+
+// File table dimensions
+$file-table-header-height: 56px;
+$file-table-row-height: 32px;
+$file-table-cell-padding-left: $ni-nimble-large-padding;
+
+:host {
+  display: contents;
+}
+
+.drawer {
+  --ni-nimble-internal-drawer-width: max(375px, min(100vw, 784px));
+}
+
+.loading-overlay {
+  align-items: center;
+  background-color: var(--ni-nimble-application-background-color);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  opacity: 0.9;
+  position: absolute;
+  z-index: 100;
+}
+
+.loading-overlay__spinner {
+  height: 48px;
+  position: sticky;
+  top: 40%;
+  width: 48px;
+}
+
+.header-container {
+  display: flex;
+  padding: $slide-out-header-block-start $slide-out-padding-inline $slide-out-content-gap;
+
+  h3 {
+    color: $ni-nimble-title-plus-1-font-color;
+    font: $ni-nimble-title-plus-1-font;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.body {
+  flex: 1;
+  overflow-y: auto;
+  padding: $slide-out-content-gap $slide-out-padding-inline $slide-out-padding-inline;
+  position: relative;
+}
+
+.form-tabs {
+  padding: 0 $slide-out-padding-inline;
+}
+
+.footer {
+  display: flex;
+  gap: $ni-nimble-standard-padding;
+  justify-content: flex-end;
+  padding: $slide-out-padding-inline;
+
+  .footer-button {
+    min-width: $slide-out-footer-button-min-width;
+  }
+}
+
+.step-form {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+
+  nimble-text-field,
+  nimble-text-area,
+  nimble-select {
+    width: 100%;
+  }
+}
+
+.tab-panel-content {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+  padding-top: $spacing-lg;
+
+  nimble-text-field,
+  nimble-text-area,
+  nimble-select {
+    width: 100%;
+  }
+}
+
+.type-description-indicator {
+  color: $ni-nimble-control-label-font-color;
+  font: $ni-nimble-control-label-font;
+  font-style: italic;
+}
+
+// Product dialog styling
+.product-search {
+  margin-bottom: $ni-nimble-standard-padding;
+}
+
+.product-table {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.system-filter-dialog {
+  --ni-nimble-dialog-width: min(750px, 98vw);
+}
+
+.query-builder-groups {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  // Cap the height so a large query scrolls vertically instead of growing unbounded.
+  max-height: min(50vh, 440px);
+  overflow-y: auto;
+  // Room on the left for the green "AND" group pill and the green "+" add-group button.
+  padding-left: 24px;
+  // Keep the scrollbar clear of the right-side delete buttons.
+  padding-right: 4px;
+}
+
+.query-group {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+}
+
+.query-group-body {
+  display: flex;
+  flex-direction: column;
+  margin-left: 4px;
+}
+
+// Solid vertical line + indent grouping the condition rows
+// (matches .smart-filter-group-condition-container).
+.query-group-conditions {
+  display: flex;
+  flex-direction: column;
+  border-left: 2px solid $ni-nimble-popup-border-color;
+  padding-left: 26px;
+}
+
+.query-condition-block {
+  width: 100%;
+  max-width: 100%;
+  // Keep visible so the between-row And/Or toggle (negative left margin) is not clipped;
+  // the inner .query-builder-row handles horizontal overflow of long values itself.
+  overflow: visible;
+  margin-bottom: 5px;
+}
+
+// One condition row: drag handle, property, [property key], operator, value, remove.
+.query-builder-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+// Property rows keep the property field on the top line and drop the property
+// name, operator and value onto a second line beneath it (matches the way
+// SystemLink lays out custom/property conditions).
+.query-builder-row--property {
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  row-gap: 10px;
+
+  .query-drag-handle {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .query-field-cell {
+    grid-column: 2 / 5;
+    grid-row: 1;
+  }
+
+  .query-row-actions {
+    grid-column: 5;
+    grid-row: 1;
+  }
+
+  .query-key-cell {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .query-operator-input {
+    grid-column: 3;
+    grid-row: 2;
+  }
+
+  .query-value-cell {
+    grid-column: 4;
+    grid-row: 2;
+  }
+}
+
+.query-key-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+// Row reorder drag handle (grip), matching the SystemLink query builder.
+.query-drag-handle {
+  align-self: end;
+  background: none;
+  border: none;
+  color: $ni-nimble-control-label-font-color;
+  cursor: grab;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 2px 6px;
+
+  &:active {
+    cursor: grabbing;
+  }
+
+  &:hover {
+    color: $ni-nimble-body-font-color;
+  }
+}
+
+// Lightweight, theme-aware drag preview (avoids cloning the heavy Nimble selects).
+.query-drag-preview {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 480px;
+  padding: 6px 12px;
+  background: $ni-nimble-application-background-color;
+  border: 1px solid $ni-nimble-popup-border-color;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 35%);
+  color: $ni-nimble-body-font-color;
+  font: var(--ni-nimble-body-font);
+  white-space: nowrap;
+
+  &__text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+// Lightweight placeholder (avoids cloning the heavy row on drag start).
+.query-drag-placeholder {
+  min-height: 40px;
+  margin-bottom: 5px;
+  border: 1px dashed $ni-nimble-popup-border-color;
+}
+
+.query-group-conditions.cdk-drop-list-dragging .query-condition-block:not(.cdk-drag-placeholder) {
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+
+// Between-row And/Or toggle: plain uppercase bold text sitting on the group's line
+// (matches .smart-filter-nested-operator).
+.query-condition-joiner {
+  margin: 12px 0 12px -20px;
+}
+
+.query-operator-toggle {
+  background: none;
+  border: none;
+  color: $ni-nimble-control-label-font-color;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 18px;
+  padding: 0;
+  text-transform: uppercase;
+
+  &:hover {
+    color: $ni-nimble-body-font-color;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $ni-nimble-body-font-color;
+    outline-offset: 2px;
+  }
+}
+
+// Between-group And/Or toggle: green pill (matches .smart-filter-group-operator).
+.query-group-joiner {
+  display: flex;
+  margin: 6px 0 10px;
+}
+
+.query-operator-toggle--group {
+  background: #009b65;
+  border: none;
+  border-radius: 50px;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 18px;
+  min-width: 50px;
+  padding: 4px 14px;
+  text-align: center;
+  text-transform: uppercase;
+
+  &:hover {
+    filter: brightness(1.08);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $ni-nimble-body-font-color;
+    outline-offset: 2px;
+  }
+}
+
+// "+ Add" condition button: dashed line continuation + muted text
+// (matches .smart-filter-add-condition-btn).
+.query-add-condition-btn {
+  align-items: center;
+  background: none;
+  border: none;
+  border-left: 2px dashed $ni-nimble-popup-border-color;
+  color: $ni-nimble-body-font-color;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 16px;
+  gap: 6px;
+  line-height: 18px;
+  margin-left: 0;
+  padding: 4px 0 4px 26px;
+  align-self: flex-start;
+
+  &:hover {
+    color: $ni-nimble-body-font-color;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $ni-nimble-body-font-color;
+    outline-offset: 2px;
+  }
+
+  &__icon {
+    font-size: 16px;
+    line-height: 1;
+  }
+}
+
+// Green circular "Add group" button (matches .smart-filter-add-btn).
+.query-add-group-fab {
+  align-items: center;
+  align-self: flex-start;
+  background: #009b65;
+  border: none;
+  border-radius: 50%;
+  color: #ffffff;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 20px;
+  font-weight: 400;
+  height: 32px;
+  justify-content: center;
+  line-height: 1;
+  margin: 10px 0 0 -12px;
+  padding: 0;
+  width: 32px;
+
+  &:hover {
+    filter: brightness(1.08);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $ni-nimble-body-font-color;
+    outline-offset: 2px;
+  }
+}
+
+.properties-label {
+  color: $ni-nimble-control-label-font-color;
+  font: $ni-nimble-control-label-font;
+}
+
+.dff-view-content {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+
+  .card-section .card-content {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: $spacing-lg $ni-nimble-large-padding;
+  }
+}
+
+.dff-help-icon {
+  color: $ni-nimble-icon-color;
+  margin-left: $ni-nimble-small-padding;
+  vertical-align: middle;
+}
+
+.dff-field {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+
+  // Multiline text areas span both columns, matching OOTB SystemLink forms.
+  &:has(nimble-text-area) {
+    grid-column: 1 / -1;
+  }
+
+  nimble-text-field,
+  nimble-text-area,
+  nimble-number-field,
+  nimble-select {
+    width: 100%;
+  }
+
+  // Align with neighbouring labelled controls, as SystemLink's DFF checkbox does.
+  .dff-checkbox {
+    margin-top: var(--ni-nimble-control-label-font-line-height);
+  }
+}
+
+.property-row-list {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+}
+
+.property-row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: $ni-nimble-standard-padding;
+
+  nimble-text-field {
+    flex: 1;
+  }
+}
+
+.multi-select-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: $ni-nimble-small-padding;
+}
+
+.section-label-row {
+  align-items: center;
+  display: inline-flex;
+  gap: $ni-nimble-small-padding;
+}
+
+.multi-select-label {
+  color: $ni-nimble-control-label-font-color;
+  font: $ni-nimble-control-label-font;
+}
+
+.required-indicator {
+  color: $ni-nimble-error-text-font-color;
+  font-size: $ni-nimble-body-font-size;
+  font-weight: $ni-nimble-body-emphasized-font-weight;
+  line-height: 1;
+  margin-left: 2px;
+}
+
+.section-tip {
+  align-items: center;
+  color: $ni-nimble-icon-color;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.section-tip--inline {
+  margin-left: $ni-nimble-small-padding;
+}
+
+.chip-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $ni-nimble-small-padding;
+  padding: $ni-nimble-small-padding;
+  border: $ni-nimble-border-width solid $ni-nimble-popup-border-color;
+  border-radius: 4px;
+  align-self: stretch;
+}
+
+.info-icon {
+  color: $ni-nimble-icon-color;
+}
+
+.filters-section {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+
+  .section-heading {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: $ni-nimble-title-plus-1-font-color;
+    font: $ni-nimble-body-font;
+    font-weight: $ni-nimble-body-emphasized-font-weight;
+    margin: $spacing-sm 0 0;
+  }
+
+  nimble-text-field {
+    width: 100%;
+  }
+
+  .filters-empty-text {
+    color: $ni-nimble-control-label-font-color;
+    font: $ni-nimble-body-font;
+  }
+}
+
+
+.test-program-combobox-container {
+  position: relative;
+  width: 100%;
+
+  nimble-combobox {
+    width: 100%;
+  }
+}
+
+.test-program-clear-icon {
+  position: absolute;
+  right: 34px;
+  top: 50%;
+  transform: translateY(-25%);
+  z-index: 1;
+}
+
+.template-group-combobox-container {
+  position: relative;
+  width: 100%;
+
+  nimble-combobox {
+    width: 100%;
+  }
+}
+
+.template-group-clear-icon {
+  position: absolute;
+  right: 34px;
+  top: 50%;
+  transform: translateY(-25%);
+  z-index: 1;
+}
+
+.dashboard-section {
+  display: flex;
+  flex-direction: column;
+  gap: $ni-nimble-standard-padding;
+
+  .section-heading {
+    color: $ni-nimble-title-plus-1-font-color;
+    font: $ni-nimble-body-font;
+    font-weight: $ni-nimble-body-emphasized-font-weight;
+    margin: $spacing-sm 0 0;
+  }
+
+  .parameter-input {
+    margin-bottom: $ni-nimble-standard-padding;
+  }
+
+  .parameters-empty-text {
+    color: $ni-nimble-body-font-color;
+    font: $ni-nimble-body-font;
+    margin-top: $ni-nimble-standard-padding;
+  }
+
+  .parameters-add-button {
+    margin-top: $spacing-xs;
+  }
+}
+
+.file-input-hidden {
+  display: none;
+}
+
+.file-area {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+}
+
+.upload-zone-label {
+  color: $ni-nimble-control-label-font-color;
+  font: $ni-nimble-control-label-font;
+}
+
+.upload-zone {
+  align-items: center;
+  border: 1px dashed $ni-nimble-popup-border-color;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  opacity: $upload-zone-content-opacity;
+  padding: $spacing-lg $upload-zone-padding-horizontal;
+
+  &--drag-over {
+    border-color: $ni-nimble-title-plus-1-font-color;
+    opacity: 1;
+  }
+
+  .upload-zone-text {
+    color: $ni-nimble-body-font-color;
+    font: $ni-nimble-body-font;
+    font-weight: $ni-nimble-body-emphasized-font-weight;
+    text-align: center;
+  }
+
+  .upload-zone-separator {
+    color: $ni-nimble-control-label-font-color;
+    font: $ni-nimble-body-font;
+  }
+}
+
+.upload-helper-text {
+  color: $ni-nimble-control-label-font-color;
+  font: $ni-nimble-control-label-font;
+}
+
+.upload-error-text,
+.multi-select-error {
+  color: $ni-nimble-error-text-font-color;
+  font: $ni-nimble-control-label-font;
+}
+
+.file-table {
+  border-collapse: collapse;
+  font-family: $ni-nimble-body-font-family;
+  table-layout: fixed;
+  width: 100%;
+
+  .col-name {
+    width: 40%;
+  }
+
+  .col-state {
+    width: 65px;
+  }
+
+  th,
+  td {
+    border-bottom-color: transparent;
+  }
+
+  th {
+    box-sizing: border-box;
+    color: $ni-nimble-control-label-font-color;
+    font-size: $ni-nimble-control-label-font-size;
+    font-weight: $ni-nimble-body-emphasized-font-weight;
+    height: $file-table-header-height;
+    padding: $ni-nimble-small-padding;
+    text-align: left;
+
+    &:first-of-type {
+      padding-left: $file-table-cell-padding-left;
+    }
+  }
+
+  td {
+    background-color: transparent;
+    color: $ni-nimble-body-font-color;
+    font-size: $ni-nimble-body-font-size;
+    overflow: hidden;
+    padding: $ni-nimble-small-padding;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    &:first-of-type {
+      padding-left: $file-table-cell-padding-left;
+    }
+  }
+
+  .file-row {
+    height: $file-table-row-height;
+
+    &:hover {
+      background-color: $ni-nimble-fill-hover-selected-color;
+    }
+  }
+
+  .file-state-icon {
+    align-items: center;
+    display: flex;
+    font-size: $ni-nimble-icon-size;
+    padding-left: $ni-nimble-small-padding;
+  }
+}
+
+.card-section {
+  border: $ni-nimble-border-width solid $ni-nimble-card-border-color;
+  border-radius: $ni-nimble-medium-padding;
+  padding: $ni-nimble-large-padding;
+
+  .card-heading-row {
+    display: flex;
+    align-items: center;
+    gap: $ni-nimble-small-padding;
+    margin: 0 0 $ni-nimble-standard-padding;
+  }
+
+  .card-heading {
+    color: $ni-nimble-title-plus-1-font-color;
+    font: $ni-nimble-subtitle-plus-1-font;
+    font-weight: $ni-nimble-body-emphasized-font-weight;
+    margin: 0;
+  }
+
+  .card-content {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-lg;
+  }
+}
+
+.global-parameters-grid {
+  display: grid;
+  gap: $spacing-lg $ni-nimble-large-padding;
+  grid-template-columns: 1fr 1fr;
+}
+
+.global-parameters-empty-text {
+  color: $ni-nimble-body-font-color;
+  font: $ni-nimble-body-font;
+}
+

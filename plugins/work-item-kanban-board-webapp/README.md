@@ -1,6 +1,6 @@
 # Work Item Kanban Board
 
-A SystemLink webapp that displays work items as a drag-and-drop Kanban board, organized by state columns (New, Defined, Reviewed, Scheduled, In Progress, Pending Approval, Closed).
+A SystemLink webapp that displays work items as a drag-and-drop Kanban board, organized by state columns (New, Defined, Reviewed, Scheduled, In progress, Pending approval, Closed).
 
 ## Features
 
@@ -9,6 +9,7 @@ A SystemLink webapp that displays work items as a drag-and-drop Kanban board, or
 - **Inline editing** — double-click a card title or assignee to edit in place
 - **Detail drawer** — click a card to open a side panel for full editing (name, state, assignee, part number, description, custom properties)
 - **Theme sync** — automatically follows the SystemLink light/dark theme
+- **Localization** — follows the SystemLink UI language (English, German, French, Japanese, Chinese), reusing SystemLink's own wording and formatting dates for the selected language
 - **Nimble icons** — uses icon components for work item type identification
 
 ## SystemLink APIs Used

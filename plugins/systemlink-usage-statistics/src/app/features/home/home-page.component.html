@@ -1,0 +1,185 @@
+<section class="overview sl-page">
+  <sl-error-banner *ngIf="state.error" [message]="state.error"></sl-error-banner>
+  <sl-loading-state *ngIf="state.isLoading"></sl-loading-state>
+
+  <ng-container *ngIf="!state.isLoading">
+    <ng-container *ngIf="state.value as model; else emptyState">
+      <nimble-banner [open]="model.unavailable.length > 0" severity="warning">
+        <ng-container i18n>{model.unavailable.length, plural, =1 {1 metric is unavailable in this environment.} other {{{model.unavailable.length}} metrics are unavailable in this environment.}}</ng-container>
+      </nimble-banner>
+
+      <div class="overview__table-toolbar">
+        <div class="overview__toolbar-start">
+          <nimble-select
+            class="overview__workspace-select"
+            filter-mode="standard"
+            [ngModel]="selectedWorkspaceId"
+            (ngModelChange)="onWorkspaceChange($event)"
+          >
+            <ng-container i18n>Workspace</ng-container>
+            <nimble-list-option value="" i18n>All</nimble-list-option>
+            <nimble-list-option *ngFor="let workspace of workspaces" [value]="workspace.id">{{ workspace.name }}</nimble-list-option>
+          </nimble-select>
+
+          <nimble-button
+            *ngIf="showDailyRate && selectedMetricNode !== null"
+            class="overview__stats-button"
+            appearance="outline"
+            (click)="openStatisticsDialog()"
+          >
+            <ng-container i18n>View Statistics</ng-container>
+          </nimble-button>
+        </div>
+
+        <div class="overview__toolbar-end">
+          <nimble-text-field
+            class="overview__search-field"
+            placeholder="Search metrics"
+            i18n-placeholder
+            title="Search metrics"
+            i18n-title
+            [value]="searchTerm"
+            (input)="onSearchInput($event)"
+          >
+            <nimble-icon-magnifying-glass slot="start"></nimble-icon-magnifying-glass>
+          </nimble-text-field>
+
+          <nimble-button
+            class="overview__refresh-button"
+            appearance="ghost"
+            title="Refresh"
+            i18n-title
+            aria-label="Refresh"
+            i18n-aria-label
+            (click)="reload()"
+          >
+            &#8635;
+          </nimble-button>
+
+          <nimble-button
+            class="overview__export-button"
+            appearance="ghost"
+            content-hidden
+            title="Export CSV"
+            i18n-title
+            aria-label="Export CSV"
+            i18n-aria-label
+            (click)="exportCsv()"
+          >
+            <nimble-icon-download slot="start"></nimble-icon-download>
+            <ng-container i18n>Export CSV</ng-container>
+          </nimble-button>
+        </div>
+      </div>
+
+      <div class="overview__table" [class.overview__table--has-rate]="showDailyRate" *ngIf="treeNodes.length > 0; else emptyState">
+        <div class="overview__header-row" aria-hidden="true">
+          <span i18n>Metric</span>
+          <span i18n>Status</span>
+          <span i18n>Count</span>
+          <span i18n>Daily Rate</span>
+          <span i18n>Details</span>
+        </div>
+
+        <nimble-tree-view selection-mode="none" class="overview__tree-view" aria-label="Usage metrics tree" i18n-aria-label>
+          <nimble-tree-item *ngFor="let group of treeNodes; trackBy: trackByNodeId" expanded>
+            <div class="overview__node-grid overview__node-grid--group">
+              <span class="overview__metric overview__metric--group">{{ group.metric }}</span>
+              <span class="overview__status overview__status--none">-</span>
+              <span>{{ group.count }}</span>
+              <span></span>
+              <span>{{ group.details }}</span>
+            </div>
+
+            <nimble-tree-item
+              *ngFor="let metric of group.children; trackBy: trackByNodeId"
+              [attr.selected]="metric === selectedMetricNode ? true : null"
+              (click)="selectMetricRow(metric)"
+              (dblclick)="openStatisticsOnDoubleClick(metric)">
+              <div class="overview__node-grid" [class.overview__node-grid--selected]="metric === selectedMetricNode">
+                <span class="overview__metric">{{ metric.metric }}</span>
+                <span
+                  class="overview__status"
+                  [class.overview__status--pass]="metric.statusGlyph === 'pass'"
+                  [class.overview__status--fail]="metric.statusGlyph === 'fail'"
+                  [class.overview__status--lock]="metric.statusGlyph === 'lock'"
+                  [attr.aria-label]="metric.statusLabel"
+                  [attr.title]="metric.statusLabel"
+                >
+                  <ng-container [ngSwitch]="metric.statusGlyph">
+                    <nimble-icon-check *ngSwitchCase="'pass'" class="overview__status-icon overview__status-icon--pass" aria-hidden="true"></nimble-icon-check>
+                    <nimble-icon-lock *ngSwitchCase="'lock'" class="overview__status-icon overview__status-icon--lock" aria-hidden="true"></nimble-icon-lock>
+                    <nimble-spinner *ngSwitchCase="'pending'" class="overview__status-spinner" aria-label="Loading" i18n-aria-label></nimble-spinner>
+                    <nimble-icon-xmark *ngSwitchDefault class="overview__status-icon overview__status-icon--fail" aria-hidden="true"></nimble-icon-xmark>
+                  </ng-container>
+                </span>
+                <span class="overview__count">{{ metric.count }}</span>
+                <span
+                  class="overview__rate"
+                  [class.overview__rate--positive]="getDailyRateSign(metric.id) === 'positive'"
+                  [class.overview__rate--negative]="getDailyRateSign(metric.id) === 'negative'"
+                >
+                  <nimble-spinner
+                    *ngIf="dailyRatesLoading && !dailyRates.has(metric.id)"
+                    class="overview__rate-spinner"
+                    aria-label="Loading rate"
+                    i18n-aria-label
+                  ></nimble-spinner>
+                  <ng-container *ngIf="!dailyRatesLoading || dailyRates.has(metric.id)">{{ formatDailyRate(metric.id) }}</ng-container>
+                </span>
+                <span>{{ metric.details }}</span>
+              </div>
+            </nimble-tree-item>
+          </nimble-tree-item>
+        </nimble-tree-view>
+      </div>
+    </ng-container>
+  </ng-container>
+
+  <ng-template #emptyState>
+    <sl-empty-state message="No usage metrics are available yet." i18n-message></sl-empty-state>
+  </ng-template>
+
+  <nimble-dialog #statsDialog class="overview__stats-dialog" aria-label="Metric Statistics" i18n-aria-label>
+    <div slot="title" class="stats-dialog-title">
+      <span>{{ statisticsMetricLabel }}</span>
+      <nimble-button
+        appearance="ghost"
+        content-hidden
+        title="Export CSV"
+        i18n-title
+        aria-label="Export CSV"
+        i18n-aria-label
+        [disabled]="statisticsHistoryDesc.length === 0 ? true : null"
+        (click)="exportStatsCsv()">
+        <nimble-icon-download slot="start"></nimble-icon-download>
+        <ng-container i18n>Export CSV</ng-container>
+      </nimble-button>
+    </div>
+    <span slot="subtitle">{{ statisticsTagPath }}</span>
+
+    <div class="stats-content">
+      <div *ngIf="statisticsLoading" class="stats-loading">
+        <nimble-spinner></nimble-spinner>
+        <span i18n>Loading historical data…</span>
+      </div>
+
+      <ng-container *ngIf="!statisticsLoading">
+        <p *ngIf="statisticsHistoryDesc.length === 0" class="stats-empty" i18n>No historical data yet. Metrics are saved as tags on each refresh.</p>
+
+        <div *ngIf="statisticsHistoryDesc.length > 0" class="stats-section-border">
+          <nimble-table
+            #statsTable
+            class="stats-table-nimble"
+            id-field-name="id"
+          >
+            <nimble-table-column-text field-name="timestamp" fractional-width="2" i18n>Timestamp</nimble-table-column-text>
+            <nimble-table-column-text field-name="value" fractional-width="1" i18n>Value</nimble-table-column-text>
+          </nimble-table>
+        </div>
+      </ng-container>
+    </div>
+
+    <nimble-button slot="footer" appearance="outline" (click)="closeStatisticsDialog()"><ng-container i18n>Close</ng-container></nimble-button>
+  </nimble-dialog>
+</section>

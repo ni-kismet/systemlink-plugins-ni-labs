@@ -1,6 +1,6 @@
 {
   "name": "atml-file-manager",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Browse SystemLink files, render ATML (IEEE 1671/1636) test results in a readable summary and step tree, and import ATML files as native Test Monitor results.",
   "license": "MIT",
@@ -10,6 +10,7 @@
     "start": "node scripts/start.js",
     "test": "node --test test/*.test.js",
     "build": "node scripts/build.js",
+    "check:locales": "node scripts/check-locales.js",
     "package": "npm run clean && npm run build && node ../../scripts/build-plugin-package.mjs . && node ../../scripts/verify-plugin-package.mjs .",
     "submission-manifest": "npm run package && node ../../scripts/create-submission-manifest.mjs ."
   },

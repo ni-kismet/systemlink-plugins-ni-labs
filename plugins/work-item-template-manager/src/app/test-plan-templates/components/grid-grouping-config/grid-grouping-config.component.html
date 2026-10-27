@@ -1,0 +1,61 @@
+<div [formGroup]="form">
+  <div
+    class="drag-list"
+    cdkDropList
+    [cdkDropListData]="groupsFA.controls"
+    (cdkDropListDropped)="drop($event)"
+  >
+    <div formArrayName="groups" class="groups-list">
+      @for (ctrl of groupsFA.controls; track ctrl.value; let index = $index) {
+        <div
+          cdkDrag
+          cdkDragLockAxis="y"
+          cdkDragBoundary=".drag-list"
+          cdkDragPreviewContainer="parent"
+          class="row"
+        >
+          <ng-template cdkDragPreview matchSize>
+            <div class="item preview">
+              <nimble-icon-four-dots-square class="drag-handle" />
+              <span class="preview-label">{{ ctrl.value | labelForId: allColumns() }}</span>
+            </div>
+          </ng-template>
+
+          <div class="item">
+            <nimble-icon-four-dots-square class="drag-handle handle" />
+            <nimble-select
+              [formControlName]="index"
+              class="select"
+              filter-mode="standard"
+              aria-label="Grouping"
+              i18n-aria-label
+            >
+              @for (column of availableFields(ctrl); track column.id) {
+                <nimble-list-option [ngValue]="column.id">
+                  {{ column.label }}
+                </nimble-list-option>
+              }
+            </nimble-select>
+            <nimble-button
+              appearance="ghost"
+              (click)="removeGroup(index)"
+              aria-label="Remove group"
+              i18n-aria-label
+            >
+              <nimble-icon-xmark />
+            </nimble-button>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</div>
+
+@if (canAddMore) {
+  <div class="add-row">
+    <nimble-button appearance="ghost" (click)="addGroup()">
+      <nimble-icon-add slot="start" />
+      <ng-container i18n>Add group</ng-container>
+    </nimble-button>
+  </div>
+}

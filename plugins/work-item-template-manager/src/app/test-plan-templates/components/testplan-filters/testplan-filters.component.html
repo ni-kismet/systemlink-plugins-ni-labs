@@ -1,0 +1,113 @@
+<div class="filters-container">
+  <form [formGroup]="filtersForm" class="filters-form">
+    <nimble-select
+      appearance="underline"
+      filter-mode="standard"
+      clearable
+      formControlName="workspace"
+      [error-visible]="workspaceError !== null"
+      [error-text]="filterErrors.workspace"
+    >
+      <ng-container i18n>Workspace</ng-container>
+      <nimble-list-option value="" i18n>All</nimble-list-option>
+      @if (workspaceError && filtersForm.controls.workspace.value; as staleWS) {
+        <nimble-list-option disabled [value]="staleWS">
+          {{ staleWS }}
+        </nimble-list-option>
+      }
+      @for (workspace of (workspaces$ | async) ?? []; track workspace.id) {
+        <nimble-list-option [value]="workspace.id">
+          {{ workspace.name }}
+        </nimble-list-option>
+      }
+    </nimble-select>
+
+    <nimble-select
+      appearance="underline"
+      filter-mode="standard"
+      clearable
+      formControlName="type"
+      [error-visible]="typeError !== null"
+      [error-text]="filterErrors.type"
+    >
+      <ng-container i18n>Type</ng-container>
+      <nimble-list-option value="" i18n>All</nimble-list-option>
+      @if (typeError && filtersForm.controls.type.value; as staleType) {
+        <nimble-list-option disabled [value]="staleType">
+          {{ staleType }}
+        </nimble-list-option>
+      }
+      @for (type of (filteredTypes$ | async) ?? []; track type) {
+        <nimble-list-option [value]="type">
+          {{ getTypeLabel(type) }}
+        </nimble-list-option>
+      }
+    </nimble-select>
+
+    <nimble-select
+      appearance="underline"
+      filter-mode="standard"
+      clearable
+      formControlName="productFamily"
+      [error-visible]="productFamilyError !== null"
+      [error-text]="filterErrors.productFamily"
+    >
+      <ng-container i18n>Product Family</ng-container>
+      <nimble-list-option value="" i18n>All</nimble-list-option>
+      @if (productFamilyError && filtersForm.controls.productFamily.value; as staleFamily) {
+        <nimble-list-option disabled [value]="staleFamily">
+          {{ staleFamily }}
+        </nimble-list-option>
+      }
+      @for (family of (filteredProductFamilies$ | async) ?? []; track family) {
+        <nimble-list-option [value]="family">
+          {{ family }}
+        </nimble-list-option>
+      }
+    </nimble-select>
+
+    <nimble-select
+      appearance="underline"
+      filter-mode="standard"
+      clearable
+      formControlName="product"
+      [error-visible]="productError !== null"
+      [error-text]="filterErrors.product"
+    >
+      <ng-container i18n>Product</ng-container>
+      <nimble-list-option value="" i18n>All</nimble-list-option>
+      @if (productError && filtersForm.controls.product.value; as staleProduct) {
+        <nimble-list-option disabled [value]="staleProduct">
+          {{ staleProduct }}
+        </nimble-list-option>
+      }
+      @for (product of (filteredProducts$ | async) ?? []; track product) {
+        <nimble-list-option [value]="product">
+          {{ product }}
+        </nimble-list-option>
+      }
+    </nimble-select>
+
+    <nimble-select
+      appearance="underline"
+      filter-mode="standard"
+      clearable
+      formControlName="category"
+      [error-visible]="categoryError !== null"
+      [error-text]="filterErrors.category"
+    >
+      <ng-container i18n>Group</ng-container>
+      <nimble-list-option value="" i18n>All</nimble-list-option>
+      @if (categoryError && filtersForm.controls.category.value; as staleCategory) {
+        <nimble-list-option disabled [value]="staleCategory">
+          {{ staleCategory }}
+        </nimble-list-option>
+      }
+      @for (category of (filteredCategories$ | async) ?? []; track category) {
+        <nimble-list-option [value]="category">
+          {{ category }}
+        </nimble-list-option>
+      }
+    </nimble-select>
+  </form>
+</div>

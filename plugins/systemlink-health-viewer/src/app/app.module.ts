@@ -19,6 +19,8 @@ import { NimbleTableModule } from '@ni/nimble-angular/table';
 import { NimbleTableColumnTextModule } from '@ni/nimble-angular/table-column/text';
 import { NimbleTableColumnMappingModule } from '@ni/nimble-angular/table-column/mapping';
 import { NimbleMappingIconModule } from '@ni/nimble-angular/mapping/icon';
+import { NimbleLabelProviderCoreModule } from '@ni/nimble-angular/label-provider/core';
+import { NimbleLabelProviderTableModule } from '@ni/nimble-angular/label-provider/table';
 import { OkFvSummaryPanelModule } from '@ni/ok-angular/fv/summary-panel';
 import { OkFvSummaryPanelTileModule } from '@ni/ok-angular/fv/summary-panel-tile';
 import { OkFvStickyHeaderModule } from '@ni/ok-angular/fv/sticky-header';
@@ -31,6 +33,8 @@ import './severity-text-column';
 
 const NIMBLE_MODULES = [
   NimbleThemeProviderModule,
+  NimbleLabelProviderCoreModule,
+  NimbleLabelProviderTableModule,
   NimbleTextFieldModule,
   NimbleButtonModule,
   NimbleBannerModule,

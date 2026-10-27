@@ -23,6 +23,8 @@ up in Test Insights alongside the rest of your data.
   privileges so users only act where they are entitled.
 - **Theme sync** — follows the SystemLink light/dark theme using NI Nimble
   components.
+- **Localization** — follows the SystemLink UI language (English, German,
+  French, Japanese, Chinese) for text, dates, numbers, and Nimble labels.
 
 ## SystemLink APIs Used
 
@@ -76,3 +78,7 @@ After updating that dependency, refresh it from the repository root:
 cp node_modules/@ni/nimble-components/dist/all-components-bundle.min.js \
   plugins/atml-file-manager/webapp/nimble/all-components-bundle.min.js
 ```
+
+Run `npm run check:locales --workspace atml-file-manager` to verify translation
+key and placeholder parity, the distinct created-result label, and language
+fallback precedence.

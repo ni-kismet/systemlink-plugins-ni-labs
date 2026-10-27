@@ -1,5 +1,6 @@
 // Nimble web components used by the Kanban board
 import '@ni/nimble-components/dist/esm/theme-provider';
+import '@ni/nimble-components/dist/esm/label-provider/core';
 import '@ni/nimble-components/dist/esm/button';
 import '@ni/nimble-components/dist/esm/select';
 import '@ni/nimble-components/dist/esm/list-option';

@@ -1,0 +1,15 @@
+@use '../../../../styles/variables' as *;
+
+.filters-container {
+  padding: $spacing-sm $spacing-md;
+  padding-bottom: $spacing-lg;
+}
+
+.filters-form {
+  display: flex;
+  gap: $spacing-sm;
+
+  nimble-select {
+    flex: 0 1 320px;
+  }
+}

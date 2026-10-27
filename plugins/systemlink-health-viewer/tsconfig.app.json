@@ -3,7 +3,7 @@
   "compilerOptions": {
     "outDir": "./out-tsc/app",
     "noEmit": false,
-    "types": []
+    "types": ["@angular/localize"]
   },
   "files": ["src/main.ts", "src/polyfills.ts"],
   "include": [

@@ -1,18 +1,21 @@
 <nimble-theme-provider [theme]="theme">
+<nimble-label-provider-core withDefaults></nimble-label-provider-core>
+<nimble-label-provider-table withDefaults></nimble-label-provider-table>
 <main class="health-app" [class.dark]="theme === 'dark'" [class.light]="theme === 'light'">
   <ok-fv-sticky-header>
   <div class="hero" slot="header">
   <header class="app-header">
     <h1>{{ title }}</h1>
-    <p class="app-version" *ngIf="appDisplayVersion">Version {{ appDisplayVersion }}</p>
-    <p class="subhead">Monitor service availability, response times, and access across your SystemLink environment.</p>
+    <p class="app-version" *ngIf="appDisplayVersion" i18n>Version {{ appDisplayVersion }}</p>
+    <p class="subhead" i18n>Monitor service availability, response times, and access across your SystemLink environment.</p>
   </header>
 
-  <section class="summary-grid" aria-label="Service summary" [attr.aria-busy]="loading">
+  <section class="summary-grid" i18n-aria-label aria-label="Service summary" [attr.aria-busy]="loading">
     <div class="summary-panel-shell">
       <ok-fv-summary-panel (click)="onSummaryPanelClick($event)">
         <ok-fv-summary-panel-tile
           data-filter="all"
+          i18n-label
           label="Total Tests"
           count="{{ loading && !hasHealthData ? '...' : totalServices }}"
           text-position="under"
@@ -20,6 +23,7 @@
         ></ok-fv-summary-panel-tile>
         <ok-fv-summary-panel-tile
           data-filter="functional"
+          i18n-label="endpoint status|"
           label="Functional"
           count="{{ loading && !hasHealthData ? '...' : functionalCount }}"
           text-position="under"
@@ -27,6 +31,7 @@
         ></ok-fv-summary-panel-tile>
         <ok-fv-summary-panel-tile
           data-filter="failed"
+          i18n-label
           label="Failed"
           count="{{ loading && !hasHealthData ? '...' : failedCount }}"
           text-position="under"
@@ -34,6 +39,7 @@
         ></ok-fv-summary-panel-tile>
         <ok-fv-summary-panel-tile
           data-filter="unauthorized"
+          i18n-label
           label="Unauthorized"
           count="{{ loading && !hasHealthData ? '...' : unauthorizedCount }}"
           text-position="under"
@@ -41,14 +47,16 @@
         ></ok-fv-summary-panel-tile>
         <ok-fv-summary-panel-tile
           class="summary-panel-tile-static"
+          i18n-label
           label="Health"
-          [count]="loading && !hasHealthData ? '...' : availabilityPercent + '%'"
+          [count]="loading && !hasHealthData ? '...' : availabilityDisplay"
           text-position="under"
         ></ok-fv-summary-panel-tile>
         <ok-fv-summary-panel-tile
           class="summary-panel-tile-static"
+          i18n-label
           label="Avg Latency"
-          [count]="loading && !hasHealthData ? '...' : (averageLatencyMs !== null ? averageLatencyMs + ' ms' : 'N/A')"
+          [count]="loading && !hasHealthData ? '...' : averageLatencyDisplay"
           text-position="under"
         ></ok-fv-summary-panel-tile>
       </ok-fv-summary-panel>
@@ -58,10 +66,11 @@
 
   <header class="app-header app-header--sticky" slot="sticky-header">
     <h1>{{ title }}</h1>
-    <section class="summary-grid summary-grid--sticky" aria-label="Service summary" [attr.aria-busy]="loading">
+    <section class="summary-grid summary-grid--sticky" i18n-aria-label aria-label="Service summary" [attr.aria-busy]="loading">
         <ok-fv-summary-panel size="compact" (click)="onSummaryPanelClick($event)">
           <ok-fv-summary-panel-tile
             data-filter="all"
+            i18n-label
             label="Total Tests"
             count="{{ loading && !hasHealthData ? '...' : totalServices }}"
             text-position="beside"
@@ -69,6 +78,7 @@
           ></ok-fv-summary-panel-tile>
           <ok-fv-summary-panel-tile
             data-filter="functional"
+            i18n-label="endpoint status|"
             label="Functional"
             count="{{ loading && !hasHealthData ? '...' : functionalCount }}"
             text-position="beside"
@@ -76,6 +86,7 @@
           ></ok-fv-summary-panel-tile>
           <ok-fv-summary-panel-tile
             data-filter="failed"
+            i18n-label
             label="Failed"
             count="{{ loading && !hasHealthData ? '...' : failedCount }}"
             text-position="beside"
@@ -83,6 +94,7 @@
           ></ok-fv-summary-panel-tile>
           <ok-fv-summary-panel-tile
             data-filter="unauthorized"
+            i18n-label
             label="Unauthorized"
             count="{{ loading && !hasHealthData ? '...' : unauthorizedCount }}"
             text-position="beside"
@@ -90,14 +102,16 @@
           ></ok-fv-summary-panel-tile>
           <ok-fv-summary-panel-tile
             class="summary-panel-tile-static"
+            i18n-label
             label="Health"
-            [count]="loading && !hasHealthData ? '...' : availabilityPercent + '%'"
+            [count]="loading && !hasHealthData ? '...' : availabilityDisplay"
             text-position="beside"
           ></ok-fv-summary-panel-tile>
           <ok-fv-summary-panel-tile
             class="summary-panel-tile-static"
+            i18n-label
             label="Avg Latency"
-            [count]="loading && !hasHealthData ? '...' : (averageLatencyMs !== null ? averageLatencyMs + ' ms' : 'N/A')"
+            [count]="loading && !hasHealthData ? '...' : averageLatencyDisplay"
             text-position="beside"
           ></ok-fv-summary-panel-tile>
         </ok-fv-summary-panel>
@@ -108,7 +122,9 @@
   <section class="toolbar">
       <nimble-text-field
         class="search-input"
+        i18n-placeholder
         placeholder="Search services, endpoints, or output"
+        i18n-title
         title="Search"
         [ngModel]="searchTerm"
         (ngModelChange)="onSearchTermChange($event)"
@@ -122,10 +138,10 @@
         class="refresh-button"
         (click)="refresh()"
         [disabled]="loading"
-        [title]="loading ? 'Refreshing' : 'Refresh service health'"
+        [title]="refreshTitle"
       >
         <nimble-icon-arrow-rotate-right slot="start"></nimble-icon-arrow-rotate-right>
-        Refresh service health
+        <ng-container i18n>Refresh service health</ng-container>
       </nimble-button>
   </section>
 
@@ -137,7 +153,7 @@
   <section class="table-card" *ngIf="loading">
       <div class="table-loading" role="status" aria-live="polite">
         <nimble-spinner class="busy-spinner" aria-hidden="true"></nimble-spinner>
-        <span>Refreshing...</span>
+        <span i18n>Refreshing...</span>
       </div>
   </section>
 
@@ -155,54 +171,50 @@
           fractional-width="0"
           min-pixel-width="80"
         >
-          Status
-          <nimble-mapping-icon key="functional" icon="nimble-icon-check" severity="success" text="Functional" text-hidden></nimble-mapping-icon>
-          <nimble-mapping-icon key="failed" icon="nimble-icon-xmark" severity="error" text="Failed" text-hidden></nimble-mapping-icon>
-          <nimble-mapping-icon key="unauthorized" icon="nimble-icon-lock" text="Unauthorized" text-hidden></nimble-mapping-icon>
+          <ng-container i18n>Status</ng-container>
+          <nimble-mapping-icon key="functional" icon="nimble-icon-check" severity="success" i18n-text="endpoint status|" text="Functional" text-hidden></nimble-mapping-icon>
+          <nimble-mapping-icon key="failed" icon="nimble-icon-xmark" severity="error" i18n-text text="Failed" text-hidden></nimble-mapping-icon>
+          <nimble-mapping-icon key="unauthorized" icon="nimble-icon-lock" i18n-text text="Unauthorized" text-hidden></nimble-mapping-icon>
         </nimble-table-column-mapping>
 
-        <nimble-table-column-text field-name="serviceDisplay" sort-index="0" sort-direction="ascending" fractional-width="2" min-pixel-width="160">Service</nimble-table-column-text>
-        <nimble-table-column-text field-name="service" fractional-width="2" min-pixel-width="150">Test</nimble-table-column-text>
-        <nimble-table-column-text field-name="commandDisplay" fractional-width="1" min-pixel-width="84">Command</nimble-table-column-text>
-        <app-link-text-column field-name="endpoint" fractional-width="2">Endpoint</app-link-text-column>
-        <app-severity-text-column field-name="registryStateDisplay" fractional-width="1">Registry State</app-severity-text-column>
-        <nimble-table-column-text field-name="latencyDisplay" sort-by-field-name="latencyMs" grouping-disabled fractional-width="1" min-pixel-width="92"><span title="Latency is measured from this browser and includes the network round-trip to the SystemLink service. It reflects this client's connection, not server-side processing time alone.">Latency</span></nimble-table-column-text>
-        <app-severity-text-column field-name="responseDisplay" sort-by-field-name="responseCode" grouping-disabled fractional-width="1">Response Code</app-severity-text-column>
+        <nimble-table-column-text field-name="serviceDisplay" sort-index="0" sort-direction="ascending" fractional-width="2" min-pixel-width="160" i18n>Service</nimble-table-column-text>
+        <nimble-table-column-text field-name="service" fractional-width="2" min-pixel-width="150" i18n>Test</nimble-table-column-text>
+        <nimble-table-column-text field-name="commandDisplay" fractional-width="1" min-pixel-width="84" i18n>Command</nimble-table-column-text>
+        <app-link-text-column field-name="endpoint" fractional-width="2" i18n>Endpoint</app-link-text-column>
+        <app-severity-text-column field-name="registryStateDisplay" fractional-width="1" i18n>Registry State</app-severity-text-column>
+        <nimble-table-column-text field-name="latencyDisplay" sort-by-field-name="latencyMs" grouping-disabled fractional-width="1" min-pixel-width="92"><span i18n-title title="Latency is measured from this browser and includes the network round-trip to the SystemLink service. It reflects this client's connection, not server-side processing time alone." i18n>Latency</span></nimble-table-column-text>
+        <app-severity-text-column field-name="responseDisplay" sort-by-field-name="responseCode" grouping-disabled fractional-width="1" i18n>Response Code</app-severity-text-column>
       </nimble-table>
   </section>
 
   <ng-template #emptyState>
-    <p class="empty-state" *ngIf="!loading">
-      Click refresh to check all configured SystemLink service endpoints.
-    </p>
+    <p class="empty-state" *ngIf="!loading" i18n>Click refresh to check all configured SystemLink service endpoints.</p>
   </ng-template>
 
-  <p class="last-updated page-footer-meta" *ngIf="lastUpdated">
-    Last updated: {{ lastUpdated | date: 'mediumTime' }}
-  </p>
+  <p class="last-updated page-footer-meta" *ngIf="lastUpdated" i18n>Last updated: {{ lastUpdated | date: 'mediumTime' }}</p>
 
-  <nimble-dialog #outputDialog aria-label="Endpoint output details" class="output-dialog">
+  <nimble-dialog #outputDialog i18n-aria-label aria-label="Endpoint output details" class="output-dialog">
     <span slot="title">{{ getSelectedOutputTestName() }}</span>
     <span slot="subtitle">{{ selectedOutput?.endpoint }}</span>
 
     <div class="output-dialog-body" *ngIf="selectedOutput">
       <div class="output-modal-meta">
-        <span>Latency: {{ selectedOutput.latencyMs !== null ? (selectedOutput.latencyMs + ' ms') : 'N/A' }}</span>
-        <span>Response: {{ selectedOutput.responseCode ?? 'N/A' }}</span>
+        <span i18n>Latency: {{ formatLatency(selectedOutput.latencyMs) }}</span>
+        <span i18n>Response: {{ selectedOutput.responseCode ?? notAvailable }}</span>
       </div>
 
       <div *ngIf="selectedOutput.method === 'POST' && selectedOutput.body" class="output-modal-section">
-        <h3>Request Buffer</h3>
+        <h3 i18n>Request Buffer</h3>
         <pre class="output-modal-buffer">{{ selectedOutput.body | json }}</pre>
       </div>
 
       <div class="output-modal-section">
-        <h3>Response Output</h3>
+        <h3 i18n>Response Output</h3>
         <pre class="output-modal-content">{{ selectedOutput.fullOutput }}</pre>
       </div>
     </div>
 
-    <nimble-button slot="footer" appearance="outline" (click)="closeOutputModal()">Close</nimble-button>
+    <nimble-button slot="footer" appearance="outline" (click)="closeOutputModal()" i18n>Close</nimble-button>
   </nimble-dialog>
 </main>
 </nimble-theme-provider>
