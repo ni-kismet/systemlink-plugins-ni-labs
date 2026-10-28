@@ -18,7 +18,14 @@ const contentTypes = {
 };
 
 const server = http.createServer((request, response) => {
-  const requestUrl = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
+  let requestUrl;
+  try {
+    requestUrl = new URL(request.url, 'http://localhost');
+  } catch {
+    response.writeHead(400);
+    response.end('Bad request');
+    return;
+  }
   if (request.method !== 'GET' && request.method !== 'HEAD') {
     response.writeHead(405, { Allow: 'GET, HEAD' });
     response.end();
@@ -58,7 +65,7 @@ const server = http.createServer((request, response) => {
   });
 });
 
-server.listen(port, () => {
+server.listen(port, '127.0.0.1', () => {
   console.log(`ATML File Manager demo: http://localhost:${port}/`);
   console.log('Serving webapp/ with mocked SystemLink services. Press Ctrl+C to stop.');
 });

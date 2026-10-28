@@ -2,7 +2,10 @@
   "name": "@ni-kismet/systemlink-plugins-ni-labs",
   "private": true,
   "version": "0.1.0",
-  "packageManager": "npm@11.6.2",
+  "packageManager": "npm@11.19.1",
+  "engines": {
+    "node": ">=24"
+  },
   "workspaces": [
     "plugins/*"
   ],
@@ -13,7 +16,7 @@
     "submission-manifest": "npm run submission-manifest --workspaces --if-present"
   },
   "devDependencies": {
-    "@ni/nimble-angular": "^33.4.6",
-    "deboa": "1.1.2"
+    "@ni/nimble-angular": "^33.6.2",
+    "deboa": "1.2.0"
   }
 }

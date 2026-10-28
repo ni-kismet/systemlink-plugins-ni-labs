@@ -8,12 +8,13 @@
   "scripts": {
     "clean": "rm -rf dist submission-manifest.json",
     "start": "node scripts/start.js",
+    "test": "node --test test/*.test.js",
     "build": "node scripts/build.js",
     "check:locales": "node scripts/check-locales.js",
     "package": "npm run clean && npm run build && node ../../scripts/build-plugin-package.mjs . && node ../../scripts/verify-plugin-package.mjs .",
     "submission-manifest": "npm run package && node ../../scripts/create-submission-manifest.mjs ."
   },
   "dependencies": {
-    "@ni/nimble-components": "35.13.1"
+    "@ni/nimble-components": "35.17.0"
   }
 }
