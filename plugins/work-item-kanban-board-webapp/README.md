@@ -6,6 +6,8 @@ A SystemLink webapp that displays work items as a drag-and-drop Kanban board, or
 
 - **Drag-and-drop** work items between state columns to update their state
 - **Filter** by work item type, workspace, assignee, or free-text search
+- **Date filtering** — choose which date to filter on (created, updated, earliest start, due, planned start, or planned end) and pick a past range (Last 24 hours … Last 6 months), the matching future range (Next 24 hours … Next 6 months), or an absolute From/To range
+- **Sorting** — cards in every column are sorted by the selected date field; the arrow in each column header toggles that column between ascending and descending. Items without the selected date are listed last. The date field and column directions are remembered in the browser
 - **Inline editing** — double-click a card title or assignee to edit in place
 - **Detail drawer** — click a card to open a side panel for full editing (name, state, assignee, part number, description, custom properties)
 - **Theme sync** — automatically follows the SystemLink light/dark theme

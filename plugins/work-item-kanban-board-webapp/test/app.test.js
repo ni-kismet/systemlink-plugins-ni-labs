@@ -171,3 +171,37 @@ test('column counts use locale-aware number grouping', () => {
         (1000).toLocaleString(i18n.language),
     );
 });
+test('query filter uses the selected date field', () => {
+    const harness = createHarness();
+    const filter = vm.runInContext(`
+        timeRangeControl = { getRange: () => ({
+            start: new Date('2026-01-01T00:00:00Z'),
+            end: new Date('2026-01-08T00:00:00Z'),
+        }) };
+        dateFilterField = 'plannedStart';
+        getWorkItemQueryFilter();
+    `, harness.context);
+    assert.match(filter, /schedule\.plannedStartDateTime >= "2026-01-01T00:00:00\.000Z"/);
+    assert.match(filter, /schedule\.plannedStartDateTime <= "2026-01-08T00:00:00\.000Z"/);
+    assert.doesNotMatch(filter, /createdAt/);
+});
+
+test('columns sort by the selected date field per column direction and keep missing dates last', () => {
+    const harness = createHarness({ preserveRenderBoard: true });
+    const order = direction => vm.runInContext(`(() => {
+        const rendered = [];
+        getFilteredItems = () => [
+            { id: 'none', state: 'NEW' },
+            { id: 'late', state: 'NEW', timeline: { dueDateTime: '2026-03-01T00:00:00Z' } },
+            { id: 'early', state: 'NEW', timeline: { dueDateTime: '2026-01-01T00:00:00Z' } },
+        ];
+        createCard = item => { rendered.push(item.id); return {}; };
+        dateFilterField = 'due';
+        columnSortDirections = ${direction ? `{ NEW: '${direction}' }` : '{}'};
+        renderBoard();
+        return rendered.join(',');
+    })()`, harness.context);
+    assert.equal(order(null), 'early,late,none');
+    assert.equal(order('asc'), 'early,late,none');
+    assert.equal(order('desc'), 'late,early,none');
+});

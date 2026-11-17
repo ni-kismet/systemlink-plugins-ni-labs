@@ -42,13 +42,20 @@
                     <div id="workspaceMsMount"></div>
                     <div id="typeMsMount"></div>
                     <div id="assigneeMsMount"></div>
+                    <div class="date-field">
+                        <span class="date-field-label" data-i18n>Date field</span>
+                        <nimble-select id="dateFieldSelect" appearance="outline" aria-label="Date field" title="Date field" data-i18n-attrs="aria-label title"></nimble-select>
+                    </div>
+                    <div class="date-field">
+                        <span class="date-field-label" data-i18n>Time range</span>
+                        <div id="timeRangeMount" class="time-range-mount"></div>
+                    </div>
                 </div>
                 <div class="header-actions">
                     <div class="header-search-field">
                         <nimble-icon-magnifying-glass class="header-search-icon"></nimble-icon-magnifying-glass>
                         <ok-fv-search-input id="searchFilter" placeholder="Search work items" title="Search" data-i18n-attrs="placeholder title"></ok-fv-search-input>
                     </div>
-                    <div id="timeRangeMount" class="time-range-mount"></div>
                     <nimble-button id="refreshBtn" appearance="outline" content-hidden aria-label="Refresh" title="Refresh" data-i18n data-i18n-attrs="aria-label title">
                         <nimble-icon-arrow-rotate-right slot="start"></nimble-icon-arrow-rotate-right>
                         Refresh
