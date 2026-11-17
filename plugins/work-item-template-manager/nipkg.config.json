@@ -1,6 +1,6 @@
 {
   "package": "work-item-template-manager",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "displayName": "Work Item Template Manager",
   "description": "Create, edit, filter, group, and organize SystemLink work item (test plan) templates, including file attachments and dashboard configuration.",
   "section": "Lab Management",

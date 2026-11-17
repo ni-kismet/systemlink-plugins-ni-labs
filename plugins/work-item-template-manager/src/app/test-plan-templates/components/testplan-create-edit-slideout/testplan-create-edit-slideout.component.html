@@ -303,6 +303,9 @@
                 <nimble-list-option disabled selected hidden value="" i18n
                   >Select workflow</nimble-list-option
                 >
+                @if (unavailableWorkflowId(); as workflowId) {
+                  <nimble-list-option [value]="workflowId">{{ workflowId }}</nimble-list-option>
+                }
                 @for (workflow of (workflows$ | async) ?? []; track workflow.id) {
                   <nimble-list-option [value]="workflow.id"
                     >{{ workflow.name }} ({{ workflow.id }})</nimble-list-option
@@ -553,6 +556,9 @@
             <nimble-list-option disabled selected hidden value="" i18n
               >Select dashboard</nimble-list-option
             >
+            @if (unavailableDashboardId(); as dashboardId) {
+              <nimble-list-option [value]="dashboardId">{{ dashboardId }}</nimble-list-option>
+            }
             @for (dashboardOption of (dashboardOptions$ | async) ?? []; track dashboardOption.id) {
               <nimble-list-option [value]="dashboardOption.id">
                 {{ dashboardOption.name }} ({{ dashboardOption.id }})
