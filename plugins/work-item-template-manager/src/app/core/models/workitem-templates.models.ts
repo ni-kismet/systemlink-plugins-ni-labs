@@ -102,7 +102,20 @@ export interface ICreateWorkitemTemplatesResponse {
   failedWorkItemTemplates?: ICreateWorkitemTemplateRequest[];
 }
 
-/** Payload for updating a single testplan template. All fields except id are optional. */
+/** Resource filters for an update; null clears a previously saved filter. */
+export interface IUpdateTemplateResourcesDefinition {
+  filterType?: ResourceFilterType;
+  systems?: IWorkitemTemplateResourceFilter | null;
+  duts?: IWorkitemTemplateResourceFilter | null;
+  fixtures?: IWorkitemTemplateResourceFilter | null;
+  assets?: IWorkitemTemplateResourceFilter | null;
+}
+
+/**
+ * Payload for updating a single testplan template. All fields except id are optional.
+ * Null or omitted fields keep their saved value, except timeline and resources (and each
+ * resource filter), where null clears the saved value.
+ */
 export interface IUpdateWorkitemTemplateRequest {
   id: string;
   type?: WorkItemType | null;
@@ -113,12 +126,12 @@ export interface IUpdateWorkitemTemplateRequest {
   summary?: string | null;
   description?: string | null;
   testProgram?: string | null;
-  timeline?: IWorkitemTemplateTimeline;
+  timeline?: IWorkitemTemplateTimeline | null;
   workspace?: string | null;
   fileIds?: string[] | null;
   properties?: Record<string, string> | null;
   workflowId?: string | null;
-  resources?: ITemplateResourcesDefinition;
+  resources?: IUpdateTemplateResourcesDefinition | null;
   dashboard?: IDashboardReferenceDefinition;
 }
 

@@ -1,6 +1,6 @@
 {
   "name": "work-item-template-manager",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "license": "MIT",
   "description": "Create, edit, filter, group, and organize SystemLink work item (test plan) templates, including file attachments and dashboard configuration.",

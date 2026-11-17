@@ -44,6 +44,7 @@ import {
   switchMap,
   take,
   takeUntil,
+  tap,
   timer,
   toArray,
   throwError,
@@ -62,6 +63,7 @@ import { IProduct } from '../../../core/models/product.models';
 import {
   ICreateWorkitemTemplateRequest,
   IUpdateWorkitemTemplateRequest,
+  IUpdateTemplateResourcesDefinition,
   IWorkitemTemplate,
   IDashboardReferenceDefinition,
   ResourceFilterType,
@@ -298,6 +300,10 @@ export class TestplanCreateEditSlideoutComponent implements OnDestroy {
   /** Selected products with display names for chip display. */
   protected readonly selectedProducts = signal<ISelectedProduct[]>([]);
 
+  /** Saved workflow/dashboard IDs kept while editing even though they are not in the option lists. */
+  protected readonly unavailableWorkflowId = signal('');
+  protected readonly unavailableDashboardId = signal('');
+
   /** Table records for the product family selection dialog. */
   protected readonly productFamilyTableData$ = new BehaviorSubject<TableRecord[]>([]);
 
@@ -512,8 +518,9 @@ export class TestplanCreateEditSlideoutComponent implements OnDestroy {
   private pendingProductSelection: string[] = [];
   private allProductRecords: TableRecord[] = [];
   private suppressWorkspaceCascade = false;
-  private suppressEstimatedDurationAutofill = false;
-  private lastAutofillSourceKey: string | null = null;
+  /** Test program that last triggered (or loaded with) the estimated duration. */
+  private durationSourceTestProgram = '';
+  private readonly testProgramEdited$ = new Subject<{ testProgram: string; session: number }>();
   /** Incremented on every open so async lookups from a previous template are discarded. */
   private panelSession = 0;
   private dynamicFormLoadId = 0;
@@ -734,30 +741,55 @@ export class TestplanCreateEditSlideoutComponent implements OnDestroy {
         this.loadDynamicFormViews(context);
       });
 
-    this.workflows$.pipe(takeUntil(this.destroy$)).subscribe((workflows) => {
-      const workflowControl = this.form.controls.templateDetails.controls.workflowId;
-      const currentWorkflow = workflowControl.value;
-      if (!currentWorkflow) {
-        return;
-      }
+    const workflowControl = this.form.controls.templateDetails.controls.workflowId;
+    combineLatest([
+      this.workflows$,
+      workflowControl.valueChanges.pipe(startWith(workflowControl.value)),
+    ])
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(([workflows]) => {
+        const currentWorkflow = workflowControl.value;
+        if (!currentWorkflow || workflows.some((workflow) => workflow.id === currentWorkflow)) {
+          this.unavailableWorkflowId.set('');
+          return;
+        }
 
-      const isValidWorkflow = workflows.some((workflow) => workflow.id === currentWorkflow);
-      if (!isValidWorkflow) {
+        if (this.isUnchangedSavedSelection(currentWorkflow, this.templateToEdit?.workflowId)) {
+          this.unavailableWorkflowId.set(currentWorkflow);
+          return;
+        }
+
+        this.unavailableWorkflowId.set('');
         workflowControl.setValue('');
-      }
-    });
+      });
 
-    this.dashboardOptions$.pipe(takeUntil(this.destroy$)).subscribe((dashboardOptions) => {
-      const dashboardIdControl = this.form.controls.templateDetails.controls.dashboard.controls.id;
-      const currentDashboardId = dashboardIdControl.value;
-      if (!currentDashboardId || dashboardOptions.length === 0) {
-        return;
-      }
+    const dashboardIdControl = this.form.controls.templateDetails.controls.dashboard.controls.id;
+    combineLatest([
+      this.dashboardOptions$,
+      dashboardIdControl.valueChanges.pipe(startWith(dashboardIdControl.value)),
+    ])
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(([dashboardOptions]) => {
+        const currentDashboardId = dashboardIdControl.value;
+        if (
+          !currentDashboardId ||
+          dashboardOptions.some((option) => option.id === currentDashboardId)
+        ) {
+          this.unavailableDashboardId.set('');
+          return;
+        }
 
-      if (!dashboardOptions.some((option) => option.id === currentDashboardId)) {
+        if (
+          dashboardOptions.length === 0 ||
+          this.isUnchangedSavedSelection(currentDashboardId, this.templateToEdit?.dashboard?.id)
+        ) {
+          this.unavailableDashboardId.set(currentDashboardId);
+          return;
+        }
+
+        this.unavailableDashboardId.set('');
         dashboardIdControl.setValue('');
-      }
-    });
+      });
 
     this.workItemTypes$.pipe(takeUntil(this.destroy$)).subscribe((types) => {
       this.workItemTypesIndex.set(
@@ -805,57 +837,39 @@ export class TestplanCreateEditSlideoutComponent implements OnDestroy {
       );
     });
 
-    const testProgramControl = this.form.controls.templateDetails.controls.testProgram;
     const workspaceControl = this.form.controls.templateDetails.controls.workspace;
     const durationControl = this.form.controls.templateDetails.controls.estimatedDurationInSeconds;
 
-    combineLatest([
-      workspaceControl.valueChanges.pipe(startWith(workspaceControl.value)),
-      testProgramControl.valueChanges.pipe(startWith(testProgramControl.value)),
-    ])
+    // Estimated duration is auto-filled only when the user changes the test program.
+    this.testProgramEdited$
       .pipe(
         debounceTime(300),
-        map(([workspace, testProgram]) => [workspace.trim(), testProgram.trim()] as const),
-        distinctUntilChanged(
-          ([prevWorkspace, prevProgram], [nextWorkspace, nextProgram]) =>
-            prevWorkspace === nextWorkspace && prevProgram === nextProgram,
-        ),
-        filter(([workspace, testProgram]) => Boolean(workspace) && Boolean(testProgram)),
-        switchMap(([workspace, testProgram]) =>
-          this.testResultService.queryFirstElapsedTimeInSeconds(workspace, testProgram).pipe(
+        filter(({ session }) => session === this.panelSession),
+        map(({ testProgram }) => testProgram.trim()),
+        filter((testProgram) => testProgram !== this.durationSourceTestProgram),
+        tap((testProgram) => (this.durationSourceTestProgram = testProgram)),
+        switchMap((testProgram) => {
+          const workspace = workspaceControl.value.trim();
+          if (!testProgram || !workspace) {
+            return of(undefined);
+          }
+
+          const session = this.panelSession;
+          return this.testResultService.queryFirstElapsedTimeInSeconds(workspace, testProgram).pipe(
             catchError(() => of(undefined)),
-            map((duration) => ({ workspace, testProgram, duration })),
-          ),
-        ),
+            filter(() => session === this.panelSession),
+          );
+        }),
         takeUntil(this.destroy$),
       )
-      .subscribe(({ workspace, testProgram, duration }) => {
-        if (duration === undefined) {
+      .subscribe((duration) => {
+        if (duration === undefined || durationControl.disabled) {
           return;
         }
 
-        // Keep a saved or user-entered duration until the workspace or test program changes.
-        const sourceKey = `${workspace}::${testProgram}`;
-        if (this.lastAutofillSourceKey === sourceKey && durationControl.value.trim()) {
-          return;
-        }
-
-        this.suppressEstimatedDurationAutofill = true;
         durationControl.setValue(String(duration));
-        this.suppressEstimatedDurationAutofill = false;
-        this.lastAutofillSourceKey = sourceKey;
+        durationControl.markAsDirty();
       });
-
-    durationControl.valueChanges.pipe(takeUntil(this.destroy$)).subscribe(() => {
-      if (this.suppressEstimatedDurationAutofill) {
-        return;
-      }
-
-      // Once the user edits the value, preserve it until workspace/test program changes.
-      if (durationControl.dirty) {
-        this.lastAutofillSourceKey = this.getAutofillSourceKey();
-      }
-    });
   }
 
   /**
@@ -1193,8 +1207,8 @@ export class TestplanCreateEditSlideoutComponent implements OnDestroy {
     const control = this.form.controls.templateDetails.controls.testProgram;
     if (control.value !== value) {
       control.setValue(value, { emitModelToViewChange: false });
-      this.lastAutofillSourceKey = null;
     }
+    this.testProgramEdited$.next({ testProgram: value, session: this.panelSession });
   }
 
   /** Clears the selected/typed test program value. */
@@ -1206,7 +1220,7 @@ export class TestplanCreateEditSlideoutComponent implements OnDestroy {
 
     control.setValue('');
     control.markAsDirty();
-    this.lastAutofillSourceKey = null;
+    this.testProgramEdited$.next({ testProgram: '', session: this.panelSession });
   }
 
   /** Clears a specific filter text field and resets any in-progress query draft for that filter. */
@@ -2599,6 +2613,7 @@ export class TestplanCreateEditSlideoutComponent implements OnDestroy {
 
     this.selectedProducts.set(products);
     this.form.controls.templateDetails.controls.partNumbers.markAsDirty();
+    this.form.controls.templateDetails.controls.partNumbers.markAsTouched();
     this.form.controls.templateDetails.controls.partNumbers.setValue(
       products.map((product) => product.partNumber),
     );
@@ -2617,6 +2632,7 @@ export class TestplanCreateEditSlideoutComponent implements OnDestroy {
     const updated = this.selectedProducts().filter((product) => product.partNumber !== partNumber);
     this.selectedProducts.set(updated);
     this.form.controls.templateDetails.controls.partNumbers.markAsDirty();
+    this.form.controls.templateDetails.controls.partNumbers.markAsTouched();
     this.form.controls.templateDetails.controls.partNumbers.setValue(
       updated.map((product) => product.partNumber),
     );
@@ -3006,22 +3022,6 @@ export class TestplanCreateEditSlideoutComponent implements OnDestroy {
       .subscribe((families) => {
         this.allProductFamilyRecords = families.map((family) => ({ id: family, name: family }));
         this.productFamilyTableData$.next([...this.allProductFamilyRecords]);
-
-        if (clearSelections) {
-          return;
-        }
-
-        const availableFamilies = new Set(families);
-        const retainedFamilies = this.selectedProductFamilies().filter((family) =>
-          availableFamilies.has(family),
-        );
-
-        if (retainedFamilies.length !== this.selectedProductFamilies().length) {
-          this.selectedProductFamilies.set(retainedFamilies);
-          this.form.controls.templateDetails.controls.productFamilies.setValue(retainedFamilies);
-          this.selectedProducts.set([]);
-          this.form.controls.templateDetails.controls.partNumbers.setValue([]);
-        }
       });
   }
 
@@ -3052,7 +3052,7 @@ export class TestplanCreateEditSlideoutComponent implements OnDestroy {
     this.isDragOver.set(false);
     this.fileChanged.set(false);
     this.existingFiles.set([]);
-    this.lastAutofillSourceKey = null;
+    this.durationSourceTestProgram = '';
     this.isParsingFile.set(false);
     this.selectedProductFamilies.set([]);
     this.selectedProducts.set([]);
@@ -3115,7 +3115,7 @@ export class TestplanCreateEditSlideoutComponent implements OnDestroy {
       },
     });
 
-    this.lastAutofillSourceKey = this.getAutofillSourceKey();
+    this.durationSourceTestProgram = (template.testProgram ?? '').trim();
     this.rebuildDashboardParameters(template.dashboard);
 
     // Populate multi-select chip displays.
@@ -3224,6 +3224,20 @@ export class TestplanCreateEditSlideoutComponent implements OnDestroy {
     this.tabsDirective().activeid = tabIdByStep[step];
   }
 
+  /**
+   * Whether a value is still the selection saved on the template being edited, in its saved
+   * workspace. Such values are kept even when the option lists do not include them.
+   */
+  private isUnchangedSavedSelection(value: string, savedValue: string | null | undefined): boolean {
+    return (
+      this.isEditMode() &&
+      !!this.templateToEdit &&
+      value === savedValue &&
+      this.form.controls.templateDetails.controls.workspace.value ===
+        (this.templateToEdit.workspace ?? '')
+    );
+  }
+
   /** Keeps the Type control state aligned with mode to avoid UI-only disable regressions. */
   private syncTypeControlLock(): void {
     const typeControl = this.form.controls.templateDetails.controls.type;
@@ -3292,10 +3306,58 @@ export class TestplanCreateEditSlideoutComponent implements OnDestroy {
 
   /** Builds an update request payload from the current form values. */
   private buildUpdateRequest(uploadedFileIds: string[] = []): IUpdateWorkitemTemplateRequest {
+    const details = this.form.controls.templateDetails.controls;
+    const payload = this.buildCommonPayload(uploadedFileIds);
+    const dashboardId = details.dashboard.controls.id.value;
+
+    // The update API keeps the saved value for null or omitted fields, so cleared values are
+    // sent explicitly. Fields disabled by the work item type are left untouched.
     return {
-      ...this.buildCommonPayload(uploadedFileIds),
+      ...payload,
+      ...(details.partNumbers.enabled && {
+        productFamilies: details.productFamilies.value,
+        partNumbers: details.partNumbers.value,
+      }),
+      summary: payload.summary ?? '',
+      ...(details.description.enabled && { description: payload.description ?? '' }),
+      ...(details.testProgram.enabled && { testProgram: payload.testProgram ?? '' }),
+      workflowId: payload.workflowId ?? '',
+      ...(details.estimatedDurationInSeconds.enabled && { timeline: payload.timeline ?? null }),
+      resources: this.buildUpdateResourcesPayload(),
+      dashboard:
+        dashboardId || payload.dashboard || this.templateToEdit?.dashboard
+          ? { id: dashboardId, variables: payload.dashboard?.variables ?? {} }
+          : undefined,
       id: this.templateToEdit!.id,
     };
+  }
+
+  /** Builds resource filters for an update, using null to clear filters the user emptied. */
+  private buildUpdateResourcesPayload(): IUpdateTemplateResourcesDefinition | null {
+    const details = this.form.controls.templateDetails.controls;
+    const filterControls = [
+      ['systems', 'systemFilter'],
+      ['duts', 'dutFilter'],
+      ['fixtures', 'fixturesFilter'],
+      ['assets', 'assetsFilter'],
+    ] as const;
+    const resources: IUpdateTemplateResourcesDefinition = { filterType: this.filterLanguage() };
+    let keepResources = false;
+
+    for (const [resourceKey, controlName] of filterControls) {
+      const control = details[controlName];
+      if (control.disabled) {
+        // Leave filters the work item type does not support untouched.
+        keepResources = true;
+        continue;
+      }
+
+      const filterValue = control.value;
+      keepResources ||= !!filterValue;
+      resources[resourceKey] = filterValue ? { filter: filterValue } : null;
+    }
+
+    return keepResources ? resources : null;
   }
 
   /** Builds the shared payload fields common to both create and update requests. */
@@ -3643,17 +3705,6 @@ export class TestplanCreateEditSlideoutComponent implements OnDestroy {
         globalParameters: this.fb.array<FormGroup<IGlobalParameterFormGroup>>([]),
       }),
     });
-  }
-
-  /** Returns workspace+program key used to detect auto-fill source changes. */
-  private getAutofillSourceKey(): string | null {
-    const workspace = this.form.controls.templateDetails.controls.workspace.value.trim();
-    const testProgram = this.form.controls.templateDetails.controls.testProgram.value.trim();
-    if (!workspace || !testProgram) {
-      return null;
-    }
-
-    return `${workspace}::${testProgram}`;
   }
 
   /** Parses and validates estimated duration in seconds from the form control. */
