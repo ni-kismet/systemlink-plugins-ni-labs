@@ -715,7 +715,7 @@ function quoteFilterValue(value) {
 
 function getWorkItemQueryFilter() {
     const filters = ['state != "CANCELED"'];
-    const dateRange = timeRangeControl ? timeRangeControl.getRange() : null;
+    const dateRange = getActiveDateRange();
     const dateFilterPath = (DATE_FIELDS[dateFilterField] || DATE_FIELDS[DEFAULT_DATE_FIELD]).filterPath;
     if (dateRange?.start) {
         filters.push(`${dateFilterPath} >= ${quoteFilterValue(dateRange.start.toISOString())}`);
@@ -972,11 +972,11 @@ function getAssigneeEntries(currentAssigneeId) {
 function getFilteredItems() {
     let items = allWorkItems;
 
-    const dateRange = timeRangeControl ? timeRangeControl.getRange() : null;
+    const dateRange = getActiveDateRange();
     if (dateRange) {
         items = items.filter(w => {
             const date = getWorkItemDate(w, dateFilterField);
-            return date && date >= dateRange.start && date <= dateRange.end;
+            return date && date >= dateRange.start && (!dateRange.end || date <= dateRange.end);
         });
     }
 
@@ -1008,6 +1008,19 @@ function getFilteredItems() {
     return items;
 }
 
+function getActiveDateRange() {
+    const range = timeRangeControl ? timeRangeControl.getRange() : null;
+    if (!range) {
+        return null;
+    }
+
+    // "Last …" presets end at the local "now". Leave them open-ended so items the server
+    // stamps slightly later (e.g. a card that was just moved) are not filtered out.
+    const state = timeRangeControl.getState();
+    const isPastPreset = state.mode === 'preset' && !String(state.value).startsWith('+');
+    return isPastPreset ? { start: range.start, end: null } : range;
+}
+
 function getWorkItemDate(item, fieldKey) {
     const field = DATE_FIELDS[fieldKey];
     const rawValue = field?.getValue ? field.getValue(item) : null;
@@ -1019,15 +1032,20 @@ function getWorkItemDate(item, fieldKey) {
     return Number.isNaN(date.getTime()) ? null : date;
 }
 
-function compareWorkItems(a, b, sort) {
-    const multiplier = sort.direction === 'asc' ? 1 : -1;
-    const left = getWorkItemDate(a, sort.field);
-    const right = getWorkItemDate(b, sort.field);
+function compareByDate(a, b, fieldKey, direction) {
+    const left = getWorkItemDate(a, fieldKey);
+    const right = getWorkItemDate(b, fieldKey);
     // Items without a value stay at the bottom regardless of direction.
     if (!left || !right) {
         return (left ? 0 : 1) - (right ? 0 : 1);
     }
-    return multiplier * (left - right);
+    return (direction === 'asc' ? 1 : -1) * (left - right);
+}
+
+function compareWorkItems(a, b, sort) {
+    // Ties and items missing the selected date fall back to most recently updated first.
+    return compareByDate(a, b, sort.field, sort.direction)
+        || (sort.field === 'updatedAt' ? 0 : compareByDate(a, b, 'updatedAt', 'desc'));
 }
 
 const CARD_RENDER_LIMIT = 50;

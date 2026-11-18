@@ -171,19 +171,63 @@ test('column counts use locale-aware number grouping', () => {
         (1000).toLocaleString(i18n.language),
     );
 });
+
 test('query filter uses the selected date field', () => {
     const harness = createHarness();
     const filter = vm.runInContext(`
-        timeRangeControl = { getRange: () => ({
-            start: new Date('2026-01-01T00:00:00Z'),
-            end: new Date('2026-01-08T00:00:00Z'),
-        }) };
+        timeRangeControl = {
+            getRange: () => ({
+                start: new Date('2026-01-01T00:00:00Z'),
+                end: new Date('2026-01-08T00:00:00Z'),
+            }),
+            getState: () => ({ mode: 'custom' }),
+        };
         dateFilterField = 'plannedStart';
         getWorkItemQueryFilter();
     `, harness.context);
     assert.match(filter, /schedule\.plannedStartDateTime >= "2026-01-01T00:00:00\.000Z"/);
     assert.match(filter, /schedule\.plannedStartDateTime <= "2026-01-08T00:00:00\.000Z"/);
     assert.doesNotMatch(filter, /createdAt/);
+});
+
+test('past presets keep items stamped after the local now, future presets keep their end', () => {
+    const harness = createHarness();
+    const visibleIds = preset => vm.runInContext(`(() => {
+        const now = Date.now();
+        const isFuture = ${preset.startsWith('+')};
+        timeRangeControl = {
+            getRange: () => isFuture
+                ? { start: new Date(now), end: new Date(now + 7 * 864e5) }
+                : { start: new Date(now - 7 * 864e5), end: new Date(now) },
+            getState: () => ({ mode: 'preset', value: '${preset}' }),
+        };
+        dateFilterField = 'updatedAt';
+        allWorkItems = [
+            { id: 'moved', state: 'NEW', updatedAt: new Date(now + 5000).toISOString() },
+            { id: 'later', state: 'NEW', updatedAt: new Date(now + 30 * 864e5).toISOString() },
+        ];
+        return getFilteredItems().map(item => item.id).join(',');
+    })()`, harness.context);
+    assert.equal(visibleIds('7d'), 'moved,later');
+    assert.equal(visibleIds('+7d'), 'moved');
+});
+
+test('ties and missing dates fall back to most recently updated first', () => {
+    const harness = createHarness({ preserveRenderBoard: true });
+    const order = vm.runInContext(`(() => {
+        const rendered = [];
+        getFilteredItems = () => [
+            { id: 'old-none', state: 'NEW', updatedAt: '2026-01-01T00:00:00Z' },
+            { id: 'due', state: 'NEW', updatedAt: '2026-01-01T00:00:00Z', timeline: { dueDateTime: '2026-02-01T00:00:00Z' } },
+            { id: 'new-none', state: 'NEW', updatedAt: '2026-01-05T00:00:00Z' },
+        ];
+        createCard = item => { rendered.push(item.id); return {}; };
+        dateFilterField = 'due';
+        columnSortDirections = {};
+        renderBoard();
+        return rendered.join(',');
+    })()`, harness.context);
+    assert.equal(order, 'due,new-none,old-none');
 });
 
 test('columns sort by the selected date field per column direction and keep missing dates last', () => {
