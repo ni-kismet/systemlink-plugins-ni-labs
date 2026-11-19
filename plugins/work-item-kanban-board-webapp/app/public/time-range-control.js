@@ -34,8 +34,10 @@
  *     presets: { all: 'Any time', '7d': 'Last 7 days', '30d': 'Last 30 days' },
  *     defaultValue: '7d',
  *   });
- * Preset keys are "<amount><unit>" where unit is m|h|d|w|y (minutes/hours/days/
- * weeks/years), or the special key 'all' (no lower bound → returns null range).
+ * Preset keys are "<amount><unit>" where unit is m|h|d|w|M|y (minutes/hours/
+ * days/weeks/calendar months/years), or the special key 'all' (no lower bound →
+ * returns null range). Prefix a key with '+' (e.g. '+1d', '+7d', '+1M') for a
+ * future range that starts now and ends that amount of time from now.
  *
  * Localization: pass `locale` (e.g. 'de') for date formatting and `strings`
  * ({ apply, absoluteRange, from, to, pickStart, pickEnd, quickRanges,
@@ -78,6 +80,7 @@
 
 .trc-dialog {
   position: fixed; margin: 0; width: fit-content; max-width: min(760px, calc(100vw - 28px));
+  max-height: calc(100vh - 24px); overflow-y: auto; overscroll-behavior: contain;
   border: 1px solid color-mix(in srgb, var(--ni-nimble-body-font-color, #202020) 16%, transparent);
   border-radius: 2px; padding: 0;
   background-color: #ffffff; color: var(--ni-nimble-body-font-color, #202020);
@@ -169,16 +172,34 @@ nimble-theme-provider[theme="color"] .trc-dialog,
   function formatDisplay(d, locale) {
     return d.toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' });
   }
-  function relativeStart(value, ref) {
+  function shiftDate(ref, amount, unit) {
+    if (unit === 'M') {
+      const shifted = new Date(ref.getTime());
+      const day = shifted.getDate();
+      shifted.setDate(1);
+      shifted.setMonth(shifted.getMonth() + amount);
+      const daysInMonth = new Date(shifted.getFullYear(), shifted.getMonth() + 1, 0).getDate();
+      shifted.setDate(Math.min(day, daysInMonth));
+      return shifted;
+    }
+    const per = { m: 6e4, h: 36e5, d: 864e5, w: 6048e5, y: 31536e6 }[unit.toLowerCase()];
+    return per ? new Date(ref.getTime() + amount * per) : null;
+  }
+  function relativeRange(value, ref) {
     ref = ref || new Date();
     if (!value || value === 'all') return null;
-    const m = String(value).match(/^(\d+)([mhdwy])$/i);
+    const m = String(value).match(/^(\+?)(\d+)([mhdwMy])$/);
     if (!m) return null;
-    const amount = parseInt(m[1], 10);
+    const amount = parseInt(m[2], 10);
     if (!Number.isFinite(amount) || amount <= 0) return null;
-    const per = { m: 6e4, h: 36e5, d: 864e5, w: 6048e5, y: 31536e6 }[m[2].toLowerCase()];
-    if (!per) return null;
-    return new Date(ref.getTime() - amount * per);
+    const isFuture = m[1] === '+';
+    const other = shiftDate(ref, isFuture ? amount : -amount, m[3]);
+    if (!other) return null;
+    return isFuture ? { start: new Date(ref.getTime()), end: other } : { start: other, end: new Date(ref.getTime()) };
+  }
+  function relativeStart(value, ref) {
+    const range = relativeRange(value, ref);
+    return range ? range.start : null;
   }
   function openNativePicker(input) {
     if (!input) return;
@@ -306,6 +327,7 @@ nimble-theme-provider[theme="color"] .trc-dialog,
       const margin = 12;
       const triggerRect = btn.getBoundingClientRect();
       dialog.style.maxWidth = `${Math.max(0, window.innerWidth - margin * 2)}px`;
+      dialog.style.maxHeight = `${Math.max(0, window.innerHeight - margin * 2)}px`;
       const rect = dialog.getBoundingClientRect();
       const left = Math.min(Math.max(triggerRect.left, margin), Math.max(margin, window.innerWidth - rect.width - margin));
       const top = Math.min(Math.max(triggerRect.bottom + 6, margin), Math.max(margin, window.innerHeight - rect.height - margin));
@@ -315,10 +337,9 @@ nimble-theme-provider[theme="color"] .trc-dialog,
     function open() {
       if (dialog.open) { close(); return; }
       applyThemeClass();
-      const now = new Date();
-      const presetStart = relativeStart(state.value, now);
-      const startDate = (state.custom && state.custom.start) || presetStart;
-      const endDate = (state.custom && state.custom.end) || (presetStart ? now : null);
+      const presetRange = state.mode === 'preset' ? relativeRange(state.value) : null;
+      const startDate = (state.custom && state.custom.start) || (presetRange && presetRange.start);
+      const endDate = (state.custom && state.custom.end) || (presetRange && presetRange.end);
       startText.value = startDate ? formatFieldValue(startDate) : '';
       endText.value = endDate ? formatFieldValue(endDate) : '';
       startNative.value = startDate ? formatDateTimeLocal(startDate) : '';
@@ -341,9 +362,7 @@ nimble-theme-provider[theme="color"] .trc-dialog,
       if (state.mode === 'custom' && state.custom && state.custom.start && state.custom.end) {
         return { start: state.custom.start, end: state.custom.end };
       }
-      const start = relativeStart(state.value);
-      if (!start) return null;
-      return { start, end: new Date() };
+      return relativeRange(state.value);
     }
     function applyPreset(value) {
       state.mode = 'preset';
@@ -436,7 +455,7 @@ nimble-theme-provider[theme="color"] .trc-dialog,
     };
   }
 
-  const api = { create, DEFAULT_PRESETS, relativeStart };
+  const api = { create, DEFAULT_PRESETS, relativeStart, relativeRange };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   global.TimeRangeControl = api;
 })(typeof window !== 'undefined' ? window : this);

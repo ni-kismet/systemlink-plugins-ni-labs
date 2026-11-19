@@ -206,6 +206,50 @@ let cardViewMode = CARD_VIEW_MODES.compressed;
 const DEFAULT_CREATION_WINDOW = '30d';
 let timeRangeControl = null;
 
+const DATE_FIELDS = {
+    createdAt: {
+        label: 'Created',
+        filterPath: 'createdAt',
+        defaultDirection: 'desc',
+        getValue: item => item?.createdAt || item?.CREATED_AT || item?.created_at,
+    },
+    updatedAt: {
+        label: 'Updated',
+        filterPath: 'updatedAt',
+        defaultDirection: 'desc',
+        getValue: item => item?.updatedAt || item?.UPDATED_AT || item?.updated_at,
+    },
+    earliestStart: {
+        label: 'Earliest start date',
+        filterPath: 'timeline.earliestStartDateTime',
+        defaultDirection: 'asc',
+        getValue: item => item?.timeline?.earliestStartDateTime,
+    },
+    due: {
+        label: 'Due date',
+        filterPath: 'timeline.dueDateTime',
+        defaultDirection: 'asc',
+        getValue: item => item?.timeline?.dueDateTime,
+    },
+    plannedStart: {
+        label: 'Planned start date',
+        filterPath: 'schedule.plannedStartDateTime',
+        defaultDirection: 'asc',
+        getValue: item => item?.schedule?.plannedStartDateTime,
+    },
+    plannedEnd: {
+        label: 'Planned end date',
+        filterPath: 'schedule.plannedEndDateTime',
+        defaultDirection: 'asc',
+        getValue: item => item?.schedule?.plannedEndDateTime,
+    },
+};
+const DEFAULT_DATE_FIELD = 'createdAt';
+let dateFilterField = DEFAULT_DATE_FIELD;
+
+// Per-column sort direction overrides; columns without one use the date field's default.
+let columnSortDirections = {};
+
 // ─── Initialize ─────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -286,6 +330,20 @@ document.addEventListener('DOMContentLoaded', () => {
             cardViewMode = savedCardViewMode;
         }
     } catch {}
+    try {
+        const savedDateField = localStorage.getItem('kanban_date_filter_field');
+        if (DATE_FIELDS[savedDateField]) {
+            dateFilterField = savedDateField;
+        }
+    } catch {}
+    try {
+        const saved = JSON.parse(localStorage.getItem('kanban_column_sort_directions') || '{}');
+        for (const state of STATES) {
+            if (saved?.[state] === 'asc' || saved?.[state] === 'desc') {
+                columnSortDirections[state] = saved[state];
+            }
+        }
+    } catch {}
 
     updateCardViewToggleButton();
     setupEventListeners();
@@ -353,11 +411,12 @@ function setupEventListeners() {
         updateCardViewToggleButton();
         renderBoard();
     });
+    setupDateFieldSelect();
     timeRangeControl = TimeRangeControl.create({
         mount: '#timeRangeMount',
         nimble: true,
         locale: language,
-        label: t('Select creation time range'),
+        label: t('Select time range'),
         presets: {
             all: t('Any time'),
             '24h': t('Last 24 hours'),
@@ -366,6 +425,12 @@ function setupEventListeners() {
             '30d': t('Last 30 days'),
             '60d': t('Last 2 months'),
             '180d': t('Last 6 months'),
+            '+24h': t('Next 24 hours'),
+            '+7d': t('Next 7 days'),
+            '+15d': t('Next 15 days'),
+            '+30d': t('Next 30 days'),
+            '+60d': t('Next 2 months'),
+            '+180d': t('Next 6 months'),
         },
         strings: {
             apply: t('Apply time range'),
@@ -414,13 +479,82 @@ function setupEventListeners() {
         }
     });
 
-    // Setup drop zones on all columns
+    // Setup drop zones and sort arrows on all columns
     for (const state of STATES) {
         const col = document.getElementById(`col-${state}`);
         col.addEventListener('dragover', onDragOver);
         col.addEventListener('dragenter', onDragEnter);
         col.addEventListener('dragleave', onDragLeave);
         col.addEventListener('drop', onDrop);
+        setupColumnSortButton(state);
+    }
+}
+
+function setupDateFieldSelect() {
+    const select = document.getElementById('dateFieldSelect');
+    if (!select) return;
+    select.innerHTML = '';
+    for (const [value, field] of Object.entries(DATE_FIELDS)) {
+        const option = document.createElement('nimble-list-option');
+        option.value = value;
+        option.textContent = t(field.label);
+        if (value === dateFilterField) option.setAttribute('selected', '');
+        select.appendChild(option);
+    }
+    select.value = dateFilterField;
+    select.addEventListener('change', () => {
+        const value = DATE_FIELDS[select.value] ? select.value : DEFAULT_DATE_FIELD;
+        if (value === dateFilterField) return;
+        dateFilterField = value;
+        // A new date field starts every column at that field's natural direction.
+        columnSortDirections = {};
+        try {
+            localStorage.setItem('kanban_date_filter_field', value);
+            localStorage.removeItem('kanban_column_sort_directions');
+        } catch {}
+        updateColumnSortButtons();
+        void loadWorkItems();
+    });
+}
+
+function getColumnSortDirection(state) {
+    return columnSortDirections[state]
+        || (DATE_FIELDS[dateFilterField] || DATE_FIELDS[DEFAULT_DATE_FIELD]).defaultDirection;
+}
+
+function setupColumnSortButton(state) {
+    const header = document.querySelector(`.kanban-column[data-state="${state}"] .column-header`);
+    const count = header?.querySelector('.column-count');
+    if (!header || !count) return;
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'column-sort-btn';
+    button.dataset.state = state;
+    button.addEventListener('click', () => {
+        columnSortDirections[state] = getColumnSortDirection(state) === 'asc' ? 'desc' : 'asc';
+        try {
+            localStorage.setItem('kanban_column_sort_directions', JSON.stringify(columnSortDirections));
+        } catch {}
+        updateColumnSortButtons();
+        renderBoard();
+    });
+    header.insertBefore(button, count);
+    updateColumnSortButtons();
+}
+
+function updateColumnSortButtons() {
+    const fieldLabel = t((DATE_FIELDS[dateFilterField] || DATE_FIELDS[DEFAULT_DATE_FIELD]).label);
+    for (const button of document.querySelectorAll('.column-sort-btn')) {
+        const isAscending = getColumnSortDirection(button.dataset.state) === 'asc';
+        const label = isAscending
+            ? t('Sorted by {field}, ascending', { field: fieldLabel })
+            : t('Sorted by {field}, descending', { field: fieldLabel });
+        button.title = label;
+        button.setAttribute('aria-label', label);
+        button.innerHTML = isAscending
+            ? '<nimble-icon-arrow-up aria-hidden="true"></nimble-icon-arrow-up>'
+            : '<nimble-icon-arrow-down aria-hidden="true"></nimble-icon-arrow-down>';
     }
 }
 
@@ -581,12 +715,13 @@ function quoteFilterValue(value) {
 
 function getWorkItemQueryFilter() {
     const filters = ['state != "CANCELED"'];
-    const createdRange = timeRangeControl ? timeRangeControl.getRange() : null;
-    if (createdRange?.start) {
-        filters.push(`createdAt >= ${quoteFilterValue(createdRange.start.toISOString())}`);
+    const dateRange = getActiveDateRange();
+    const dateFilterPath = (DATE_FIELDS[dateFilterField] || DATE_FIELDS[DEFAULT_DATE_FIELD]).filterPath;
+    if (dateRange?.start) {
+        filters.push(`${dateFilterPath} >= ${quoteFilterValue(dateRange.start.toISOString())}`);
     }
-    if (createdRange?.end) {
-        filters.push(`createdAt <= ${quoteFilterValue(createdRange.end.toISOString())}`);
+    if (dateRange?.end) {
+        filters.push(`${dateFilterPath} <= ${quoteFilterValue(dateRange.end.toISOString())}`);
     }
 
     const workspaceValues = [...getMsSelected('workspace')];
@@ -837,11 +972,11 @@ function getAssigneeEntries(currentAssigneeId) {
 function getFilteredItems() {
     let items = allWorkItems;
 
-    const createdRange = timeRangeControl ? timeRangeControl.getRange() : null;
-    if (createdRange) {
+    const dateRange = getActiveDateRange();
+    if (dateRange) {
         items = items.filter(w => {
-            const createdAt = getWorkItemCreatedAt(w);
-            return createdAt && createdAt >= createdRange.start && createdAt <= createdRange.end;
+            const date = getWorkItemDate(w, dateFilterField);
+            return date && date >= dateRange.start && (!dateRange.end || date <= dateRange.end);
         });
     }
 
@@ -873,14 +1008,45 @@ function getFilteredItems() {
     return items;
 }
 
-function getWorkItemCreatedAt(item) {
-    const rawCreatedAt = item?.createdAt || item?.CREATED_AT || item?.created_at;
-    if (!rawCreatedAt) {
+function getActiveDateRange() {
+    const range = timeRangeControl ? timeRangeControl.getRange() : null;
+    if (!range) {
         return null;
     }
 
-    const createdAt = new Date(rawCreatedAt);
-    return Number.isNaN(createdAt.getTime()) ? null : createdAt;
+    // "Last …" presets end at the local "now". Leave them open-ended so items the server
+    // stamps slightly later (e.g. a card that was just moved) are not filtered out.
+    const state = timeRangeControl.getState();
+    const isPastPreset = state.mode === 'preset' && !String(state.value).startsWith('+')
+         && (dateFilterField === 'createdAt' || dateFilterField === 'updatedAt');
+    return isPastPreset ? { start: range.start, end: null } : range;
+}
+
+function getWorkItemDate(item, fieldKey) {
+    const field = DATE_FIELDS[fieldKey];
+    const rawValue = field?.getValue ? field.getValue(item) : null;
+    if (!rawValue) {
+        return null;
+    }
+
+    const date = new Date(rawValue);
+    return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function compareByDate(a, b, fieldKey, direction) {
+    const left = getWorkItemDate(a, fieldKey);
+    const right = getWorkItemDate(b, fieldKey);
+    // Items without a value stay at the bottom regardless of direction.
+    if (!left || !right) {
+        return (left ? 0 : 1) - (right ? 0 : 1);
+    }
+    return (direction === 'asc' ? 1 : -1) * (left - right);
+}
+
+function compareWorkItems(a, b, sort) {
+    // Ties and items missing the selected date fall back to most recently updated first.
+    return compareByDate(a, b, sort.field, sort.direction)
+        || (sort.field === 'updatedAt' ? 0 : compareByDate(a, b, 'updatedAt', 'desc'));
 }
 
 const CARD_RENDER_LIMIT = 50;
@@ -896,7 +1062,8 @@ function renderBoard() {
         countEl.textContent = stateItems.length.toLocaleString(language);
         col.innerHTML = '';
 
-        const sorted = [...stateItems].sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
+        const columnSort = { field: dateFilterField, direction: getColumnSortDirection(state) };
+        const sorted = [...stateItems].sort((a, b) => compareWorkItems(a, b, columnSort));
         const visible = sorted.slice(0, CARD_RENDER_LIMIT);
         visible.forEach(item => col.appendChild(createCard(item)));
 
