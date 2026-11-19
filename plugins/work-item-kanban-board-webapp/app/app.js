@@ -1017,7 +1017,8 @@ function getActiveDateRange() {
     // "Last …" presets end at the local "now". Leave them open-ended so items the server
     // stamps slightly later (e.g. a card that was just moved) are not filtered out.
     const state = timeRangeControl.getState();
-    const isPastPreset = state.mode === 'preset' && !String(state.value).startsWith('+');
+    const isPastPreset = state.mode === 'preset' && !String(state.value).startsWith('+')
+         && (dateFilterField === 'createdAt' || dateFilterField === 'updatedAt');
     return isPastPreset ? { start: range.start, end: null } : range;
 }
 
