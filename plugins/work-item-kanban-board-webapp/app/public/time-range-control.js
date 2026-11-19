@@ -80,6 +80,7 @@
 
 .trc-dialog {
   position: fixed; margin: 0; width: fit-content; max-width: min(760px, calc(100vw - 28px));
+  max-height: calc(100vh - 24px); overflow-y: auto; overscroll-behavior: contain;
   border: 1px solid color-mix(in srgb, var(--ni-nimble-body-font-color, #202020) 16%, transparent);
   border-radius: 2px; padding: 0;
   background-color: #ffffff; color: var(--ni-nimble-body-font-color, #202020);
@@ -326,6 +327,7 @@ nimble-theme-provider[theme="color"] .trc-dialog,
       const margin = 12;
       const triggerRect = btn.getBoundingClientRect();
       dialog.style.maxWidth = `${Math.max(0, window.innerWidth - margin * 2)}px`;
+      dialog.style.maxHeight = `${Math.max(0, window.innerHeight - margin * 2)}px`;
       const rect = dialog.getBoundingClientRect();
       const left = Math.min(Math.max(triggerRect.left, margin), Math.max(margin, window.innerWidth - rect.width - margin));
       const top = Math.min(Math.max(triggerRect.bottom + 6, margin), Math.max(margin, window.innerHeight - rect.height - margin));
